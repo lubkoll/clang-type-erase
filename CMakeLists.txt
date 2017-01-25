@@ -1,0 +1,5 @@
+set(LLVM_LINK_COMPONENTS support)
+set(CMAKE_CXX_STANDARD 14)
+#add_definitions(-std=c++1z)
+add_subdirectory(tool)
+add_subdirectory(utils)
