@@ -85,8 +85,6 @@ namespace clang
                 assert(LastLine > 0);
                 assert(LastColumn > 0);
 
-                llvm::outs() << "Copying range " << FirstLine << ":" << FirstColumn << " - " << LastLine << ":" << LastColumn << "\n";
-
                 std::ifstream InputFile(FileName);
                 std::string Buffer;
                 int Counter = 0;
@@ -108,7 +106,6 @@ namespace clang
                     if(Counter >= FirstLine &&
                        Counter <= LastLine)
                     {
-                        llvm::outs() << "copying line " << Counter << ": " << Buffer << "\n";
                         File << Buffer << '\n';
                     }
                 }
@@ -149,7 +146,7 @@ namespace clang
 
                     File << "///" << std::regex_replace(Buffer,
                                                         std::regex("\\*/|\\s*(\\*\\s|///|//\\!)"),
-                                                        "") << '\n';
+                                                        "") << "\n";
                 }
             }
 
@@ -237,19 +234,19 @@ namespace clang
             void writeCasts(std::ostream& File,
                              const Config& Configuration)
             {
-                auto Write = [&File,&Configuration](bool IsConst)
+                auto Write = [&File,&Configuration](const char* ConstSpecifier)
                 {
                     File << "template <class T>\n"
-                         << (IsConst ? "const " : "") << "T* " << Configuration.CastName << "() "
-                         << (IsConst ? "const " : "") << "noexcept\n"
+                         << ConstSpecifier << "T* " << Configuration.CastName << "() "
+                         << ConstSpecifier << "noexcept\n"
                          << "{\n"
                          << "return " << Configuration.StorageObject << ".template target<T>();\n"
                          << "}\n"
                          << '\n';
                 };
 
-                Write(false);
-                Write(true);
+                Write("");
+                Write("const ");
             }
 
             void writePrivateSection(std::ostream& File,
@@ -329,7 +326,7 @@ namespace clang
                                   (const auto& Entry)
                     {
                         if(ClassName == Entry.ClassName)
-                            AliasesAndStaticMemberString += Entry.Entry + ";\n";
+                            AliasesAndStaticMemberString += Entry.Entry + (Entry.Entry[0] == '/' ? "" : "\n");
                     });
                     Content = std::regex_replace(Content,
                                                  getAliasesAndStaticMemberPlaceholderRegex(Interfaces[I].ClassName),
@@ -344,7 +341,10 @@ namespace clang
         {
             if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getLocStart()))
                 return true;
+
             utils::handleClosingNamespaces(InterfaceFileStream, *Declaration, OpenNamespaces);
+            if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+                copyComment(InterfaceFileStream, *Comment, Context.getSourceManager());
             InterfaceFileStream << "namespace " << Declaration->getNameAsString() << " {\n";
             OpenNamespaces.push(Declaration->getNameAsString());
             return true;
@@ -455,7 +455,7 @@ namespace clang
                 AliasesAndStaticMembers.emplace_back(CurrentClass,
                                                      (Declaration->isStaticDataMember() ? "static " : "") +
                                                      Declaration->getType().getAsString(printingPolicy()) +
-                                                     " " + Declaration->getNameAsString() + Initializer);
+                                                     " " + Declaration->getNameAsString() + Initializer + ";");
             }
             else
                 copy(InterfaceFileStream, *Declaration, Context.getSourceManager());
@@ -468,11 +468,23 @@ namespace clang
                 return true;
 
             if(isMember(CurrentClass, *Declaration))
+            {
+                if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+                {
+                    std::stringstream CommentStream;
+                    copyComment(CommentStream, *Comment, Context.getSourceManager());
+                    AliasesAndStaticMembers.emplace_back(CurrentClass, CommentStream.str());
+                }
                 AliasesAndStaticMembers.emplace_back(CurrentClass,
                                                      "typedef " + Declaration->getUnderlyingType().getAsString() +
-                                                     " " + Declaration->getNameAsString());
+                                                     " " + Declaration->getNameAsString() + ";");
+            }
             else
+            {
+                if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+                    copyComment(InterfaceFileStream, *Comment, Context.getSourceManager());
                 copy(InterfaceFileStream, *Declaration, Context.getSourceManager());
+            }
             return true;
         }
 
@@ -482,11 +494,23 @@ namespace clang
                 return true;
 
             if(isMember(CurrentClass, *Declaration))
+            {
+                if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+                {
+                    std::stringstream CommentStream;
+                    copyComment(CommentStream, *Comment, Context.getSourceManager());
+                    AliasesAndStaticMembers.emplace_back(CurrentClass, CommentStream.str());
+                }
                 AliasesAndStaticMembers.emplace_back(CurrentClass,
                                                      "using " + Declaration->getNameAsString() +
-                                                     " = " + Declaration->getUnderlyingType().getAsString());
+                                                     " = " + Declaration->getUnderlyingType().getAsString() + ";");
+            }
             else
+            {
+                if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+                    copyComment(InterfaceFileStream, *Comment, Context.getSourceManager());
                 copy(InterfaceFileStream, *Declaration, Context.getSourceManager());
+            }
             return true;
         }
 
@@ -497,6 +521,8 @@ namespace clang
                     Declaration->getTemplatedKind() != FunctionDecl::TK_NonTemplate)
                 return true;
 
+            if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+                copyComment(InterfaceFileStream, *Comment, Context.getSourceManager());
             copy(InterfaceFileStream, *Declaration, Context.getSourceManager());
             return true;
         }
@@ -507,6 +533,8 @@ namespace clang
                     dynamic_cast<CXXMethodDecl*>(Declaration) != nullptr)
                 return true;
 
+            if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+                copyComment(InterfaceFileStream, *Comment, Context.getSourceManager());
             copy(InterfaceFileStream, *Declaration, Context.getSourceManager());
             return true;
         }
