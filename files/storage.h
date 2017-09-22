@@ -19,6 +19,13 @@ namespace clang
             }
 
             template <class T>
+            void destruct_data(void* data) noexcept
+            {
+                assert(data);
+                static_cast<T*>(data)->~T();
+            }
+
+            template <class T>
             void* copy_data(void* data)
             {
                 return data ? new T( *static_cast<T*>(data) ) : nullptr;
@@ -288,6 +295,43 @@ namespace clang
         };
 
 
+        class NonCopyableCOWStorage : public Accessor<NonCopyableCOWStorage>
+        {
+        public:
+            constexpr NonCopyableCOWStorage() noexcept = default;
+
+            template <class T,
+                      std::enable_if_t<!std::is_base_of<NonCopyableCOWStorage, std::decay_t<T> >::value>* = nullptr>
+            explicit NonCopyableCOWStorage(T&& value)
+                : Accessor<NonCopyableCOWStorage>(typeid(std::decay_t<T>).hash_code(),
+                                       detail::IsReferenceWrapper< std::decay_t<T> >::value),
+                  data(std::make_shared< std::decay_t<T> >(std::forward<T>(value)))
+            {}
+
+            template <class T,
+                      std::enable_if_t<!std::is_base_of<NonCopyableCOWStorage, std::decay_t<T> >::value>* = nullptr>
+            NonCopyableCOWStorage& operator=(T&& value)
+            {
+                return *this = NonCopyableCOWStorage(std::forward<T>(value));
+            }
+
+        private:
+            friend class Accessor<NonCopyableCOWStorage>;
+
+            void* read() const noexcept
+            {
+                return data.get();
+            }
+
+            void* write() noexcept
+            {
+                return read();
+            }
+
+            std::shared_ptr<void> data = nullptr;
+        };
+
+
         template <int buffer_size>
         class SBOStorage : public Accessor< SBOStorage<buffer_size> >
         {
@@ -296,10 +340,12 @@ namespace clang
             struct FunctionTable
             {
                 using delete_fn = void(*)(void*);
+                using destruct_fn = void(*)(void*);
                 using copy_fn = void*(*)(void*);
                 using buffer_copy_fn = void*(*)(void*, Buffer&);
 
                 delete_fn del = nullptr;
+                destruct_fn destruct = nullptr;
                 copy_fn copy = nullptr;
                 buffer_copy_fn copy_into = nullptr;
             };
@@ -317,6 +363,7 @@ namespace clang
                 : Accessor< SBOStorage<buffer_size> >(typeid(std::decay_t<T>).hash_code(),
                                                       detail::IsReferenceWrapper< std::decay_t<T> >::value),
                   function_table{&detail::delete_data< std::decay_t<T> >,
+                                 &detail::destruct_data< std::decay_t<T> >,
                                  &detail::copy_data< std::decay_t<T> >,
                                  &detail::copy_into_buffer<std::decay_t<T>, Buffer>}
             {
@@ -404,8 +451,13 @@ namespace clang
 
             void reset() noexcept
             {
-                if(data && detail::is_heap_allocated(data, buffer))
+                if(!data)
+                    return;
+
+                if(detail::is_heap_allocated(data, buffer))
                     function_table.del(data);
+                else
+                    function_table.destruct(data);
             }
 
             void* read() const noexcept
@@ -434,6 +486,128 @@ namespace clang
 
 
         template <int buffer_size>
+        class NonCopyableSBOStorage : public Accessor< NonCopyableSBOStorage<buffer_size> >
+        {
+            using Buffer = std::array<char,buffer_size>;
+
+            struct FunctionTable
+            {
+                using delete_fn = void(*)(void*);
+                using destruct_fn = void(*)(void*);
+                delete_fn del = nullptr;
+                destruct_fn destruct = nullptr;
+            };
+
+        public:
+
+            constexpr NonCopyableSBOStorage() noexcept = default;
+
+            template <class T,
+                      std::enable_if_t<!std::is_base_of<NonCopyableSBOStorage, std::decay_t<T> >::value>* = nullptr>
+            explicit NonCopyableSBOStorage(T&& value)
+            noexcept( sizeof(std::decay_t<T>) <= sizeof(Buffer) &&
+                      ( (std::is_rvalue_reference<T>::value && std::is_nothrow_move_constructible<std::decay_t<T>>::value) ||
+                        (std::is_lvalue_reference<T>::value && std::is_nothrow_copy_constructible<std::decay_t<T>>::value) ) )
+                : Accessor< NonCopyableSBOStorage<buffer_size> >(typeid(std::decay_t<T>).hash_code(),
+                                                      detail::IsReferenceWrapper< std::decay_t<T> >::value),
+                  function_table{
+                      &detail::delete_data< std::decay_t<T> >,
+                      &detail::destruct_data< std::decay_t<T> > }
+            {
+                if( sizeof(std::decay_t<T>) <= sizeof(Buffer))
+                {
+                    new(&buffer) std::decay_t<T>(std::forward<T>(value));
+                    data = &buffer;
+                }
+                else
+                    data = new std::decay_t<T>(std::forward<T>(value));
+            }
+
+            template <class T,
+                      std::enable_if_t<!std::is_base_of<NonCopyableSBOStorage, std::decay_t<T> >::value>* = nullptr>
+            NonCopyableSBOStorage& operator=(T&& value)
+            noexcept( sizeof(std::decay_t<T>) <= sizeof(Buffer) &&
+                      ( (std::is_rvalue_reference<T>::value && std::is_nothrow_move_constructible<std::decay_t<T>>::value) ||
+                        (std::is_lvalue_reference<T>::value && std::is_nothrow_copy_constructible<std::decay_t<T>>::value) ) )
+            {
+                return *this = NonCopyableSBOStorage(std::forward<T>(value));
+            }
+
+            ~NonCopyableSBOStorage()
+            {
+                reset();
+            }
+
+            NonCopyableSBOStorage(NonCopyableSBOStorage&& other) noexcept
+                : Accessor< NonCopyableSBOStorage<buffer_size> >(other),
+                  function_table(other.function_table)
+            {
+                if(!other.data)
+                    return;
+
+                if(detail::is_heap_allocated(other.data, other.buffer))
+                    data = other.data;
+                else
+                {
+                    buffer = other.buffer;
+                    data = &buffer;
+                }
+
+                other.data = nullptr;
+            }
+
+            NonCopyableSBOStorage& operator=(NonCopyableSBOStorage&& other) noexcept
+            {
+                reset();
+                if(!other.data)
+                {
+                    data = nullptr;
+                    return *this;
+                }
+                Accessor< NonCopyableSBOStorage<buffer_size> >::operator=(other);
+                function_table = other.function_table;
+                if(detail::is_heap_allocated(other.data, other.buffer))
+                    data = other.data;
+                else
+                {
+                    buffer = other.buffer;
+                    data = &buffer;
+                }
+                other.data = nullptr;
+                return *this;
+            }
+
+        private:
+            friend class Accessor< NonCopyableSBOStorage<buffer_size> >;
+
+            void reset() noexcept
+            {
+                if(!data)
+                    return;
+
+                if(detail::is_heap_allocated(data, buffer))
+                    function_table.del(data);
+                else
+                    function_table.destruct(data);
+            }
+
+            void* read() const noexcept
+            {
+                return data;
+            }
+
+            void* write()
+            {
+                return read();
+            }
+
+            FunctionTable function_table;
+            void* data = nullptr;
+            Buffer buffer;
+        };
+
+
+        template <int buffer_size>
         class SBOCOWStorage : public Accessor< SBOCOWStorage<buffer_size> >
         {
             static const constexpr bool always_copy = false;
@@ -442,9 +616,11 @@ namespace clang
 
             struct FunctionTable
             {
+                using destruct_fn = void(*)(void*);
                 using copy_fn = std::shared_ptr<void>(*)(const std::shared_ptr<void>&);
                 using buffer_copy_fn = std::shared_ptr<void>(*)(const std::shared_ptr<void>&, Buffer&);
 
+                destruct_fn destruct = nullptr;
                 copy_fn copy = nullptr;
                 buffer_copy_fn copy_into = nullptr;
             };
@@ -461,7 +637,8 @@ namespace clang
                         (std::is_lvalue_reference<T>::value && std::is_nothrow_copy_constructible<std::decay_t<T>>::value) ) )
                 : Accessor< SBOCOWStorage<buffer_size> >(typeid(std::decay_t<T>).hash_code(),
                                                          detail::IsReferenceWrapper< std::decay_t<T> >::value),
-                  function_table{&detail::copy_data< std::decay_t<T> >,
+                  function_table{&detail::destruct_data< std::decay_t<T> >,
+                                 &detail::copy_data< std::decay_t<T> >,
                                  &detail::copy_into_buffer<std::decay_t<T>, Buffer>}
             {
                 if( sizeof(std::decay_t<T>) <= sizeof(Buffer))
@@ -505,8 +682,14 @@ namespace clang
                 other.data = nullptr;
             }
 
+            ~SBOCOWStorage() noexcept
+            {
+                reset();
+            }
+
             SBOCOWStorage& operator=(const SBOCOWStorage& other)
             {
+                reset();
                 if(!other.data)
                 {
                     data = nullptr;
@@ -521,6 +704,7 @@ namespace clang
 
             SBOCOWStorage& operator=(SBOCOWStorage&& other) noexcept
             {
+                reset();
                 if(!other.data)
                 {
                     data = nullptr;
@@ -536,6 +720,14 @@ namespace clang
         private:
             friend class Accessor< SBOCOWStorage<buffer_size> >;
 
+            void reset() noexcept
+            {
+                if(!data)
+                    return;
+
+                if(!detail::is_heap_allocated(data.get(), buffer))
+                    function_table.destruct(data.get());
+            }
             void* read() const noexcept
             {
                 return data.get();
@@ -568,5 +760,99 @@ namespace clang
             std::shared_ptr<void> data = nullptr;
             Buffer buffer;
         };
+
+
+//        template <int buffer_size>
+//        class NonCopyableSBOCOWStorage : public Accessor< NonCopyableSBOCOWStorage<buffer_size> >
+//        {
+//            static const constexpr bool always_copy = false;
+//            static const constexpr bool move_heap_allocated = true;
+//            using Buffer = std::array<char,buffer_size>;
+//        public:
+
+//            constexpr NonCopyableSBOCOWStorage() noexcept = default;
+
+//            template <class T,
+//                      std::enable_if_t<!std::is_base_of<NonCopyableSBOCOWStorage, std::decay_t<T> >::value>* = nullptr>
+//            explicit NonCopyableSBOCOWStorage(T&& value)
+//            noexcept( sizeof(std::decay_t<T>) <= sizeof(Buffer) &&
+//                      ( (std::is_rvalue_reference<T>::value && std::is_nothrow_move_constructible<std::decay_t<T>>::value) ||
+//                        (std::is_lvalue_reference<T>::value && std::is_nothrow_copy_constructible<std::decay_t<T>>::value) ) )
+//                : Accessor< NonCopyableSBOCOWStorage<buffer_size> >(typeid(std::decay_t<T>).hash_code(),
+//                                                         detail::IsReferenceWrapper< std::decay_t<T> >::value),
+//                  function_table{&detail::copy_data< std::decay_t<T> >,
+//                                 &detail::copy_into_buffer<std::decay_t<T>, Buffer>}
+//            {
+//                if( sizeof(std::decay_t<T>) <= sizeof(Buffer))
+//                {
+//                    new(&buffer) std::decay_t<T>(std::forward<T>(value));
+//                    data = std::shared_ptr< std::decay_t<T> >(
+//                               std::shared_ptr< std::decay_t<T> >(),
+//                               static_cast<std::decay_t<T>*>(static_cast<void*>(&buffer))
+//                               );
+//                }
+//                else
+//                    data = std::make_shared< std::decay_t<T> >(std::forward<T>(value));
+//            }
+
+//            template <class T,
+//                      std::enable_if_t<!std::is_base_of<NonCopyableSBOCOWStorage, std::decay_t<T> >::value>* = nullptr>
+//            NonCopyableSBOCOWStorage& operator=(T&& value)
+//            noexcept( sizeof(std::decay_t<T>) <= sizeof(Buffer) &&
+//                      ( (std::is_rvalue_reference<T>::value && std::is_nothrow_move_constructible<std::decay_t<T>>::value) ||
+//                        (std::is_lvalue_reference<T>::value && std::is_nothrow_copy_constructible<std::decay_t<T>>::value) ) )
+//            {
+//                return *this = NonCopyableSBOCOWStorage(std::forward<T>(value));
+//            }
+
+//            NonCopyableSBOCOWStorage(NonCopyableSBOCOWStorage&& other) noexcept
+//                : Accessor< NonCopyableSBOCOWStorage<buffer_size> >(other),
+//                  function_table(other.function_table)
+//            {
+//                if(!other.data)
+//                    return;
+//                data = std::move(other).move_if_heap_allocated(buffer);
+//                other.data = nullptr;
+//            }
+
+//            NonCopyableSBOCOWStorage& operator=(NonCopyableSBOCOWStorage&& other) noexcept
+//            {
+//                if(!other.data)
+//                {
+//                    data = nullptr;
+//                    return *this;
+//                }
+//                Accessor< NonCopyableSBOCOWStorage<buffer_size> >::operator=(other);
+//                function_table = other.function_table;
+//                data = std::move(other).move_if_heap_allocated(buffer);
+//                other.data = nullptr;
+//                return *this;
+//            }
+
+//        private:
+//            friend class Accessor< NonCopyableSBOCOWStorage<buffer_size> >;
+
+//            void* read() const noexcept
+//            {
+//                return data.get();
+//            }
+
+//            void* write() noexcept
+//            {
+//                return read();
+//            }
+
+//            std::shared_ptr<void> move_if_heap_allocated(Buffer& other_buffer) const &&
+//            {
+//                if(detail::is_heap_allocated(data.get(), buffer))
+//                    return std::move(data);
+//                else
+//                    return function_table.copy_into(data, other_buffer);
+//            }
+
+//            FunctionTable function_table;
+//            std::shared_ptr<void> data = nullptr;
+//            Buffer buffer;
+//        };
     }
 }

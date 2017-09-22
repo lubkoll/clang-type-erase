@@ -93,21 +93,15 @@ namespace clang
                     ++Counter;
                     getline(InputFile, Buffer);
 
-                    std::size_t LineBegin = 0;
-                    std::size_t LineEnd = Buffer.size();
-                    if(Counter == FirstLine)
-                        LineBegin = FirstColumn-1;
-//                    if(Counter == LastLine)
-//                        LineEnd = LastColumn;
+                    const std::size_t LineBegin = Counter == FirstLine ? FirstColumn-1 : 0;
+                    const std::size_t LineEnd = Counter == LastLine ? std::size_t(LastColumn) : Buffer.size();
 
                     Buffer = std::string(begin(Buffer) + LineBegin,
                                          begin(Buffer) + LineEnd);
 
                     if(Counter >= FirstLine &&
                        Counter <= LastLine)
-                    {
-                        File << Buffer << '\n';
-                    }
+                        File << Buffer << "\n";
                 }
             }
 
@@ -146,11 +140,14 @@ namespace clang
 
                     File << "///" << std::regex_replace(Buffer,
                                                         std::regex("\\*/|\\s*(\\*\\s|///|//\\!)"),
-                                                        "") << "\n";
+                                                        "") << (Counter < LastLine ? "\n" : "");
                 }
             }
 
-            template <class Decl>
+
+            template <class Decl,
+                      std::enable_if_t<!std::is_same<Decl, TypeAliasDecl>::value &&
+                                       !std::is_same<Decl, TypedefDecl>::value>* = nullptr>
             void copy(std::ostream& File,
                       const Decl& Declaration,
                       const SourceManager& SM)
@@ -161,6 +158,17 @@ namespace clang
                 File << '\n';
             }
 
+            template <class Decl,
+                      std::enable_if_t<std::is_same<Decl, TypeAliasDecl>::value ||
+                                       std::is_same<Decl, TypedefDecl>::value>* = nullptr>
+            void copy(std::ostream& File,
+                      const Decl& Declaration,
+                      const SourceManager& SM)
+            {
+                File << "using " << Declaration.getNameAsString() << " = "
+                     << Declaration.getUnderlyingType().getAsString() << ";\n";
+            }
+
             void copyComment(std::ostream& File,
                              const comments::FullComment& Declaration,
                              const SourceManager& SM)
@@ -168,6 +176,7 @@ namespace clang
                 copyComment(File,
                             Declaration.getSourceRange().getBegin().printToString(SM),
                             Declaration.getSourceRange().getEnd().printToString(SM));
+                File << '\n';
             }
 
             std::string decayed(const std::string& Type, const Config& Configuration)
@@ -376,6 +385,8 @@ namespace clang
                           Declaration->method_end(),
                           [this,&Declaration,&FunctionNames,&ClassName,&ClassStream](const auto& Method)
             {
+                if(!Method->isUserProvided())
+                    return;
                 if(auto Comment = Context.getCommentForDecl(Method, &PP))
                     copyComment(ClassStream, *Comment, Context.getSourceManager());
 

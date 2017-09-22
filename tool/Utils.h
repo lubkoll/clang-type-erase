@@ -44,7 +44,7 @@ namespace clang
                                                        const std::string& ClassName);
 
             std::tuple<std::string,bool>
-            replaceClassNameInReturnType(const QualType& Type,
+            replaceClassNameInReturnType(const CXXMethodDecl& Type,
                                          const std::string& ClassName,
                                          const Config& Configuration);
 

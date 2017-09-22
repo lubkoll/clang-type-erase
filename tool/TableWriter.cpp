@@ -21,6 +21,8 @@ namespace clang
                 std::for_each(Declaration.method_begin(), Declaration.method_end(),
                               [&Stream,&Declaration,&Configuration](const auto& Method)
                 {
+                    if(!Method->isUserProvided())
+                        return;
                     auto FunctionName = utils::getFunctionName(*Method);
                     Stream << "using " << FunctionName << "_function = "
                            << utils::getFunctionPointer(*Method, Declaration.getName().str(), Configuration) << " ;\n"
@@ -40,10 +42,12 @@ namespace clang
                 std::for_each(Declaration.method_begin(), Declaration.method_end(),
                               [&Declaration,&Configuration,&Stream](const auto& Method)
                 {
+                    if(!Method->isUserProvided())
+                        return;
                     const auto ClassName = Declaration.getName().str();
-                    const auto NewReturnType = utils::replaceClassNameInReturnType(Method->getReturnType(),
-                                                                                          ClassName,
-                                                                                          Configuration);
+                    const auto NewReturnType = utils::replaceClassNameInReturnType(*Method,
+                                                                                   ClassName,
+                                                                                   Configuration);
                     const auto ReturnsClassNameRef = utils::returnsClassNameRef(*Method, ClassName);
                     Stream << "static " << std::get<0>(NewReturnType) << ' ' << utils::getFunctionName(*Method)
                            << " ( ";
@@ -77,6 +81,8 @@ namespace clang
                               [&Stream,&Declaration,&Concepts]
                               (const auto& Method)
                 {
+                    if(!Method->isUserProvided())
+                        return;
                     const auto FunctionName = utils::getFunctionName(*Method);
                     const auto TryMemFnName = "TryMemFn_" + FunctionName;
                     const auto HasMemFnName = "HasMemFn_" + FunctionName;
@@ -120,6 +126,7 @@ namespace clang
               Context(Context),
               Configuration(Configuration)
         {
+            llvm::outs() << "Table generator\n";
             utils::writeNoOverwriteWarning(TableFile, Configuration);
             TableFile << "#pragma once\n\n"
                         << "#include " << Configuration.UtilInclude << '\n'

@@ -238,23 +238,24 @@ namespace clang
 
 
             std::tuple<std::string,bool>
-            replaceClassNameInReturnType(const QualType& Type,
+            replaceClassNameInReturnType(const CXXMethodDecl& Method,
                                          const std::string& ClassName,
                                          const Config& Configuration)
             {
-                auto Str = Type.getAsString(printingPolicy());
-                std::smatch ClassNameMatch;
-                std::regex ClassNameRegex("(.*\\s+|.*::|)(" + ClassName + ")(\\s+.*|)");
-
-                if( std::regex_search(Str, ClassNameMatch, ClassNameRegex) )
+                if( !returnsClassNameRef(Method, ClassName) )
                 {
-                    const bool IsReference = std::regex_match(Str, std::regex(".*&\\s*"));
-                    Str = (Type.isConstQualified() ? "const " : "") + std::string(Configuration.InterfaceType) +
-                          (IsReference ? " &" : "");
-                    return std::make_tuple(Str,IsReference);
+                    if(Method.getReturnType().getAsString(printingPolicy()) == ClassName)
+                        return std::make_tuple(Configuration.InterfaceType, false);
+                    return std::make_tuple(Method.getReturnType().getAsString(printingPolicy()),
+                                           false);
                 }
 
-                return std::make_tuple(Str,false);
+                const bool IsReference = std::regex_match(Method.getReturnType().getAsString(printingPolicy()), 
+std::regex(".*&\\s*"));
+                auto Str = (Method.getReturnType().isConstQualified() ? "const " : "") + 
+                           std::string(Configuration.InterfaceType) +
+                           (IsReference ? " &" : "");
+                return std::make_tuple(std::move(Str),IsReference);
             };
 
 
@@ -262,7 +263,7 @@ namespace clang
                                            const std::string& ClassName,
                                            const Config& Configuration)
             {
-                const auto ReturnType = replaceClassNameInReturnType(Method.getReturnType(),
+                const auto ReturnType = replaceClassNameInReturnType(Method,
                                                                      ClassName,
                                                                      Configuration);
                 std::stringstream Stream;

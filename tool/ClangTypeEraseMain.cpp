@@ -151,15 +151,25 @@ void readCommandLine(type_erasure::Config& Configuration)
     Configuration.TargetDir = concat(Configuration.IncludeDir,
                                      TargetDir);
     Configuration.DetailDir = concat(Configuration.TargetDir,
-                                     Configuration.DetailDir);
+                                     DetailDir);
+    llvm::outs() << Configuration.DetailDir << '\n';
     Configuration.SourceFile = SourcePaths.front();
-    Configuration.StorageType = Configuration.CopyOnWrite ?
-                                    (Configuration.SmallBufferOptimization ?
-                                         ("clang::type_erasure::SBOCOWStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
-                                         "clang::type_erasure::COWStorage") :
-                                    (Configuration.SmallBufferOptimization ?
-                                         ("clang::type_erasure::SBOStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
-                                         "clang::type_erasure::Storage");
+    if(!Configuration.NonCopyable)
+        Configuration.StorageType = Configuration.CopyOnWrite ?
+                                        (Configuration.SmallBufferOptimization ?
+                                             ("clang::type_erasure::SBOCOWStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
+                                             "clang::type_erasure::COWStorage") :
+                                        (Configuration.SmallBufferOptimization ?
+                                             ("clang::type_erasure::SBOStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
+                                             "clang::type_erasure::Storage");
+    else
+        Configuration.StorageType = Configuration.CopyOnWrite ?
+                                        (Configuration.SmallBufferOptimization ?
+                                             ("clang::type_erasure::NonCopyableSBOCOWStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
+                                             "clang::type_erasure::NonCopyableCOWStorage") :
+                                        (Configuration.SmallBufferOptimization ?
+                                             ("clang::type_erasure::NonCopyableSBOStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
+                                             "clang::type_erasure::NonCopyableStorage");
 }
 
 void copyFile(const std::string& OriginalFile,
@@ -199,6 +209,12 @@ int main(int Argc, const char **Argv)
                  << " === File: " << Configuration.SourceFile << '\n'
                  << " === Target directory: " << Configuration.TargetDir << '\n'
                  << " ===\n";
+    if( boost::filesystem::equivalent(boost::filesystem::path(Configuration.TargetDir),
+                                      boost::filesystem::path(Configuration.SourceFile).remove_filename()) )
+    {
+        llvm::outs() << "In-place generation of interfaces is not yet allowed.\n";
+        return 1;
+    }
 
     copyFile("/home/lars/Libraries/llvm2/tools/clang/tools/extra/clang-type-erase/files/type_erasure_util.h",
              Configuration.UtilDir,
