@@ -1,0 +1,362 @@
+#include <gtest/gtest.h>
+
+#include "interface.hh"
+#include "../mock_fooable.hh"
+
+namespace
+{
+    using %class_name% = %namespace_name%::%class_name%;
+    using Mock::Mock%class_name%;
+    using Mock::MockLarge%class_name%;
+
+    void death_tests( %class_name%& fooable )
+    {
+#ifndef NDEBUG
+        EXPECT_DEATH( fooable.foo(), "" );
+        EXPECT_DEATH( fooable.set_value( Mock::other_value ), "" );
+#endif
+    }
+
+    void test_interface( %class_name%& fooable, int initial_value, int new_value )
+    {
+        EXPECT_EQ( fooable.foo(), initial_value );
+        fooable.set_value( new_value );
+        EXPECT_EQ( fooable.foo(), new_value );
+    }
+
+    void test_ref_interface( %class_name%& fooable, const Mock%class_name%& mock_fooable,
+                             int new_value )
+    {
+        test_interface(fooable, mock_fooable.foo(), new_value);
+        EXPECT_EQ( mock_fooable.foo(), new_value );
+    }
+
+    void test_copies( %class_name%& copy, const %class_name%& fooable, int new_value )
+    {
+        auto value = fooable.foo();
+        test_interface( copy, value, new_value );
+        EXPECT_EQ( fooable.foo(), value );
+        ASSERT_NE( value, new_value );
+        EXPECT_NE( fooable.foo(), copy.foo() );
+    }
+}
+
+
+TEST( Test%namespace_name%%class_name%, Empty )
+{
+    %class_name% fooable;
+    death_tests(fooable);
+
+    %class_name% copy(fooable);
+    death_tests(copy);
+
+    %class_name% move( std::move(fooable) );
+    death_tests(move);
+
+    %class_name% copy_assign;
+    copy_assign = move;
+    death_tests(copy_assign);
+
+    %class_name% move_assign;
+    move_assign = std::move(fooable);
+    death_tests(move_assign);
+}
+
+TEST( Test%namespace_name%%class_name%, OperatorBool_SmallObject )
+{
+    %class_name% fooable;
+    bool valid( fooable );
+    EXPECT_FALSE( valid );
+    fooable = Mock%class_name%();
+    valid = bool( fooable );
+    EXPECT_TRUE( valid );
+    fooable = %class_name%();
+    valid = bool( fooable );
+    EXPECT_FALSE( valid );
+}
+
+TEST( Test%namespace_name%%class_name%, OperatorBool_LargeObject )
+{
+    %class_name% fooable;
+    bool valid( fooable );
+    EXPECT_FALSE( valid );
+    fooable = MockLarge%class_name%();
+    valid = bool( fooable );
+    EXPECT_TRUE( valid );
+    fooable = %class_name%();
+    valid = bool( fooable );
+    EXPECT_FALSE( valid );
+}
+
+TEST( Test%namespace_name%%class_name%, NestedTypeAlias )
+{
+    const auto expected_nested_type_alias = std::is_same<%class_name%::type, int>::value;
+    EXPECT_TRUE( expected_nested_type_alias );
+}
+
+TEST( Test%namespace_name%%class_name%, NestedType )
+{
+    const auto expected_nested_type = std::is_same<%class_name%::void_type, void>::value;
+    EXPECT_TRUE( expected_nested_type );
+}
+
+TEST( Test%namespace_name%%class_name%, StaticConstMemberVariable )
+{
+    const auto static_value = %class_name%::static_value;
+    EXPECT_EQ( 1, static_value );
+}
+
+TEST( Test%namespace_name%%class_name%, CopyFromValue_SmallObject )
+{
+    Mock%class_name% mock_fooable;
+    auto value = mock_fooable.foo();
+    %class_name% fooable( mock_fooable );
+
+    test_interface( fooable, value, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, CopyFromValue_LargeObject )
+{
+    MockLarge%class_name% mock_fooable;
+    auto value = mock_fooable.foo();
+    %class_name% fooable( mock_fooable );
+
+    test_interface( fooable, value, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, CopyConstruction_SmallObject )
+{
+    %class_name% fooable = Mock%class_name%();
+    %class_name% other( fooable );
+    test_copies( other, fooable, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, CopyConstruction_LargeObject )
+{
+    %class_name% fooable = MockLarge%class_name%();
+    %class_name% other( fooable );
+    test_copies( other, fooable, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, CopyFromValueWithReferenceWrapper_SmallObject )
+{
+    Mock%class_name% mock_fooable;
+    %class_name% fooable( std::ref(mock_fooable) );
+
+    test_ref_interface( fooable, mock_fooable, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, CopyFromValueWithReferenceWrapper_LargeObject )
+{
+    MockLarge%class_name% mock_fooable;
+    %class_name% fooable( std::ref(mock_fooable) );
+
+    test_ref_interface( fooable, mock_fooable, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, MoveFromValue_SmallObject )
+{
+    Mock%class_name% mock_fooable;
+    auto value = mock_fooable.foo();
+    %class_name% fooable( std::move(mock_fooable) );
+
+    test_interface( fooable, value, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, MoveFromValue_LargeObject )
+{
+    MockLarge%class_name% mock_fooable;
+    auto value = mock_fooable.foo();
+    %class_name% fooable( std::move(mock_fooable) );
+
+    test_interface( fooable, value, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, MoveConstruction_SmallObject )
+{
+    %class_name% fooable = Mock%class_name%();
+    auto value = fooable.foo();
+    %class_name% other( std::move(fooable) );
+
+    test_interface( other, value, Mock::other_value );
+    death_tests(fooable);
+}
+
+TEST( Test%namespace_name%%class_name%, MoveConstruction_LargeObject )
+{
+    %class_name% fooable = MockLarge%class_name%();
+    auto value = fooable.foo();
+    %class_name% other( std::move(fooable) );
+
+    test_interface( other, value, Mock::other_value );
+    death_tests(fooable);
+}
+
+TEST( Test%namespace_name%%class_name%, MoveFromValueWithReferenceWrapper_SmallObject )
+{
+    Mock%class_name% mock_fooable;
+    %class_name% fooable( std::move(std::ref(mock_fooable)) );
+
+    test_ref_interface( fooable, mock_fooable, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, MoveFromValueWithReferenceWrapper_LargeObject )
+{
+    MockLarge%class_name% mock_fooable;
+    %class_name% fooable( std::move(std::ref(mock_fooable)) );
+
+    test_ref_interface( fooable, mock_fooable, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, CopyAssignFromValue_SmallObject )
+{
+    Mock%class_name% mock_fooable;
+    %class_name% fooable;
+
+    auto value = mock_fooable.foo();
+    fooable = mock_fooable;
+    test_interface(fooable, value, Mock::other_value);
+}
+
+TEST( Test%namespace_name%%class_name%, CopyAssignFromValue_LargeObject )
+{
+    MockLarge%class_name% mock_fooable;
+    %class_name% fooable;
+
+    auto value = mock_fooable.foo();
+    fooable = mock_fooable;
+    test_interface(fooable, value, Mock::other_value);
+}
+
+TEST( Test%namespace_name%%class_name%, CopyAssignment_SmallObject )
+{
+    %class_name% fooable = Mock%class_name%();
+    %class_name% other;
+    other = fooable;
+    test_copies( other, fooable, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, CopyAssignment_LargeObject )
+{
+    %class_name% fooable = MockLarge%class_name%();
+    %class_name% other;
+    other = fooable;
+    test_copies( other, fooable, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, CopyAssignFromValueWithReferenceWrapper_SmallObject )
+{
+    Mock%class_name% mock_fooable;
+    %class_name% fooable;
+
+    fooable = std::ref(mock_fooable);
+    test_ref_interface( fooable, mock_fooable, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, CopyAssignFromValueWithReferenceWrapper_LargeObject )
+{
+    MockLarge%class_name% mock_fooable;
+    %class_name% fooable;
+
+    fooable = std::ref(mock_fooable);
+    test_ref_interface( fooable, mock_fooable, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, MoveAssignFromValue_SmallObject )
+{
+    Mock%class_name% mock_fooable;
+    %class_name% fooable;
+
+    auto value = mock_fooable.foo();
+    fooable = std::move(mock_fooable);
+    test_interface(fooable, value, Mock::other_value);
+}
+
+TEST( Test%namespace_name%%class_name%, MoveAssignFromValue_LargeObject )
+{
+    MockLarge%class_name% mock_fooable;
+    %class_name% fooable;
+
+    auto value = mock_fooable.foo();
+    fooable = std::move(mock_fooable);
+    test_interface(fooable, value, Mock::other_value);
+}
+
+TEST( Test%namespace_name%%class_name%, MoveAssignment_SmallObject )
+{
+    %class_name% fooable = Mock%class_name%();
+    auto value = fooable.foo();
+    %class_name% other;
+    other = std::move(fooable);
+
+    test_interface( other, value, Mock::other_value );
+    death_tests(fooable);
+}
+
+TEST( Test%namespace_name%%class_name%, MoveAssignment_LargeObject )
+{
+    %class_name% fooable = MockLarge%class_name%();
+    auto value = fooable.foo();
+    %class_name% other;
+    other = std::move(fooable);
+
+    test_interface( other, value, Mock::other_value );
+    death_tests(fooable);
+}
+
+TEST( Test%namespace_name%%class_name%, MoveAssignFromValueWithReferenceWrapper_SmallObject )
+{
+    Mock%class_name% mock_fooable;
+    %class_name% fooable;
+
+    fooable = std::move(std::ref(mock_fooable));
+    test_ref_interface( fooable, mock_fooable, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, MoveAssignFromValueWithReferenceWrapper_LargeObject )
+{
+    MockLarge%class_name% mock_fooable;
+    %class_name% fooable;
+
+    fooable = std::move(std::ref(mock_fooable));
+    test_ref_interface( fooable, mock_fooable, Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, Cast_SmallObject )
+{
+    %class_name% fooable = Mock%class_name%();
+
+    ASSERT_FALSE( fooable.target<Mock%class_name%>() == nullptr );
+
+    fooable.set_value(Mock::other_value);
+    EXPECT_EQ( fooable.target<Mock%class_name%>()->foo(), Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, Cast_LargeObject )
+{
+    %class_name% fooable = MockLarge%class_name%();
+
+    ASSERT_FALSE( fooable.target<MockLarge%class_name%>() == nullptr );
+
+    fooable.set_value(Mock::other_value);
+    EXPECT_EQ( fooable.target<MockLarge%class_name%>()->foo(), Mock::other_value );
+}
+
+TEST( Test%namespace_name%%class_name%, ConstCast_SmallObject )
+{
+    const %class_name% fooable = Mock%class_name%();
+
+    ASSERT_FALSE( fooable.target<Mock%class_name%>() == nullptr );
+
+    EXPECT_EQ( fooable.target<Mock%class_name%>()->foo(), Mock::value );
+}
+
+TEST( Test%namespace_name%%class_name%, ConstCast_LargeObject )
+{
+    const %class_name% fooable = MockLarge%class_name%();
+
+    ASSERT_FALSE( fooable.target<MockLarge%class_name%>() == nullptr );
+
+    EXPECT_EQ( fooable.target<MockLarge%class_name%>()->foo(), Mock::value );
+}
+

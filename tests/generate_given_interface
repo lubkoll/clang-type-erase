@@ -1,0 +1,13 @@
+#!/bin/bash
+
+rm -f $2 && touch $2
+echo '// copyright' >> $2
+echo '' >> $2
+echo '#pragma once' >> $2
+echo '' >> $2
+echo '' >> $2
+echo 'namespace '$1 >> $2
+echo '{' >> $2
+cat ../../$2 >> $2
+echo '}' >> $2
+echo '' >> $2

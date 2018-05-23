@@ -1,0 +1,51 @@
+#!/bin/bash
+
+INTERFACE_FILE=interface.hh
+GIVEN_INTERFACE=plain_interface.hh
+CLANG_PATH=$1
+
+echo $CWD
+
+function prepare_test_case {
+  rm -rf $1 && mkdir $1
+  cp ../$1/* $1/
+  python2 ../generate_tests.py --namespace-name $2 --class-name "Fooable" --test-file $1/interface_test.cpp --form ../interface_test.form $3
+  cd $1
+  ../../generate_given_interface $2 $GIVEN_INTERFACE
+  mkdir -p Interface
+  cp $GIVEN_INTERFACE Interface/$INTERFACE_FILE
+  ./generate_interface $INTERFACE_FILE $GIVEN_INTERFACE $CLANG_PATH
+  cd ..
+}
+
+function prepare_vtable_test_case {
+  rm -rf $1 && mkdir $1
+  cp ../$1/* $1/
+  python2 ../generate_tests.py --namespace-name $2 --class-name "Fooable" --test-file $1/interface_test.cpp --form ../vtable_interface_test.form $3
+  cd $1
+  ../../generate_given_interface $2 $GIVEN_INTERFACE
+  ./generate_interface $INTERFACE_FILE $GIVEN_INTERFACE $CLANG_PATH
+  cd ..
+}
+
+# remove previously generate files
+rm -rf gen/ && mkdir gen
+cp util.hh gen/
+cp mock_fooable.hh gen/
+cd gen
+
+# inheritance-based type-erased interfaces
+#prepare_test_case basic Basic
+#prepare_test_case cow COW
+#prepare_test_case sbo SBO
+prepare_test_case sbo_cow SBO_COW
+
+# vtable-based type-erased interfaces
+#prepare_vtable_test_case vtable_basic VTableBasic
+#prepare_vtable_test_case vtable_cow VTableCOW --cow
+#prepare_vtable_test_case vtable_sbo VTableSBO --sbo
+#prepare_vtable_test_case vtable_sbo_cow VTableSBOCOW --sbo --cow
+cd ..
+
+# run unit tests
+rm -rf build && mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make && ./unit_tests && cd ..
