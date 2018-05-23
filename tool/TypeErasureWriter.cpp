@@ -6,6 +6,7 @@
 #include "clang/Lex/Preprocessor.h"
 
 #include "PreprocessorCallback.h"
+#include "SimpleInterfaceWriter.h"
 
 namespace clang
 {
@@ -131,6 +132,28 @@ namespace clang
             TypeErasureGenerator Visitor;
         };
 
+        class SimpleTypeErasureConsumer : public ASTConsumer
+        {
+        public:
+            explicit SimpleTypeErasureConsumer(ASTContext& Context,
+                                         Preprocessor& PP,
+                                         const Config& Configuration)
+                : Visitor(getInterfaceFile(Configuration).c_str(),
+                          Context,
+                          PP,
+                          Configuration,
+                          {})
+            {}
+
+            void HandleTranslationUnit(ASTContext &Context) override
+            {
+                Visitor.TraverseDecl(Context.getTranslationUnitDecl());
+            }
+
+        private:
+            SimpleInterfaceGenerator Visitor;
+        };
+
 
         class TypeErasureAction : public SyntaxOnlyAction
         {
@@ -141,7 +164,11 @@ namespace clang
 
             std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance& Compiler, llvm::StringRef) override
             {
-                return std::unique_ptr<ASTConsumer>(new TypeErasureConsumer(Compiler.getASTContext(),
+                if(Configuration.CustomFunctionTable)
+                    return std::unique_ptr<ASTConsumer>(new TypeErasureConsumer(Compiler.getASTContext(),
+                                                                                Compiler.getPreprocessor(),
+                                                                                Configuration));
+                return std::unique_ptr<ASTConsumer>(new SimpleTypeErasureConsumer(Compiler.getASTContext(),
                                                                             Compiler.getPreprocessor(),
                                                                             Configuration));
             }

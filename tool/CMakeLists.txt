@@ -8,6 +8,7 @@ add_clang_executable(clang-type-erase
   ClangTypeEraseMain.cpp
   TableWriter.cpp
   InterfaceWriter.cpp
+  SimpleInterfaceWriter.cpp
   TypeErasureWriter.cpp
   PreprocessorCallback.cpp
   Utils.cpp

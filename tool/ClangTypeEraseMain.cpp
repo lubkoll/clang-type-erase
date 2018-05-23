@@ -19,9 +19,6 @@ using namespace llvm;
 // only ones displayed.
 static llvm::cl::OptionCategory ClangTypeEraseCategory("clang-type-erase options");
 
-// CommonOptionsParser declares HelpMessage with a description of the common
-// command-line options related to the compilation database and input files.
-// It's nice to have this help message in all tools.
 static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 
 // A help message for this specific tool can be added afterwards.
@@ -54,6 +51,10 @@ cl::opt<bool> HeaderOnly("header-only",
                          cl::cat(ClangTypeEraseCategory));
 cl::alias HeaderOnlyAlias("ho", cl::desc("Alias for -header-only"),
                           cl::aliasopt(HeaderOnly));
+
+cl::opt<bool> CustomFunctionTable("custom",
+                         cl::desc(R"(custom function table)"),
+                         cl::cat(ClangTypeEraseCategory));
 
 cl::opt<unsigned> BufferSize("buffer-size",
                              cl::desc(R"(buffer size for small buffer optimization)"),
@@ -119,6 +120,8 @@ CC1Arguments(cl::ConsumeAfter,
 
 std::string makeAbsolute(const std::string& PathStr)
 {
+    if(PathStr.empty())
+        return PathStr;
     boost::filesystem::path Path(PathStr);
     if(!Path.is_absolute())
         return (boost::filesystem::current_path() /= Path).c_str();
@@ -139,6 +142,7 @@ void readCommandLine(type_erasure::Config& Configuration)
     Configuration.SmallBufferOptimization = SmallBufferOptimization;
     Configuration.NonCopyable = NonCopyable;
     Configuration.HeaderOnly = HeaderOnly;
+    Configuration.CustomFunctionTable = CustomFunctionTable;
     //    config.no_rtti = NoRTTI;
     Configuration.BufferSize = BufferSize;
     Configuration.CppStandard = CppStandard;
@@ -152,24 +156,33 @@ void readCommandLine(type_erasure::Config& Configuration)
                                      TargetDir);
     Configuration.DetailDir = concat(Configuration.TargetDir,
                                      DetailDir);
-    llvm::outs() << Configuration.DetailDir << '\n';
     Configuration.SourceFile = SourcePaths.front();
-    if(!Configuration.NonCopyable)
-        Configuration.StorageType = Configuration.CopyOnWrite ?
-                                        (Configuration.SmallBufferOptimization ?
-                                             ("clang::type_erasure::SBOCOWStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
-                                             "clang::type_erasure::COWStorage") :
-                                        (Configuration.SmallBufferOptimization ?
-                                             ("clang::type_erasure::SBOStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
-                                             "clang::type_erasure::Storage");
-    else
-        Configuration.StorageType = Configuration.CopyOnWrite ?
-                                        (Configuration.SmallBufferOptimization ?
-                                             ("clang::type_erasure::NonCopyableSBOCOWStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
-                                             "clang::type_erasure::NonCopyableCOWStorage") :
-                                        (Configuration.SmallBufferOptimization ?
-                                             ("clang::type_erasure::NonCopyableSBOStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
-                                             "clang::type_erasure::NonCopyableStorage");
+    if(Configuration.CustomFunctionTable)
+    {
+        if(!Configuration.NonCopyable)
+            Configuration.StorageType = Configuration.CopyOnWrite ?
+                                            (Configuration.SmallBufferOptimization ?
+                                                 ("clang::type_erasure::SBOCOWStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
+                                                 "clang::type_erasure::COWStorage") :
+                                            (Configuration.SmallBufferOptimization ?
+                                                 ("clang::type_erasure::SBOStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
+                                                 "clang::type_erasure::Storage");
+        else
+            Configuration.StorageType = Configuration.CopyOnWrite ?
+                                            (Configuration.SmallBufferOptimization ?
+                                                 ("clang::type_erasure::NonCopyableSBOCOWStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
+                                                 "clang::type_erasure::NonCopyableCOWStorage") :
+                                            (Configuration.SmallBufferOptimization ?
+                                                 ("clang::type_erasure::NonCopyableSBOStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
+                                                 "clang::type_erasure::NonCopyableStorage");
+    } else {
+        Configuration.StorageType = "clang::type_erasure::polymorphic::";
+        if(Configuration.CopyOnWrite) {
+            Configuration.StorageType.append(Configuration.SmallBufferOptimization ? "SBOCOWStorage" : "COWStorage" );
+        } else {
+            Configuration.StorageType.append(Configuration.SmallBufferOptimization ? "SBOStorage" : "Storage" );
+        }
+    }
 }
 
 void copyFile(const std::string& OriginalFile,
@@ -204,6 +217,8 @@ int main(int Argc, const char **Argv)
     type_erasure::Config Configuration;
     readCommandLine(Configuration);
 
+    llvm::outs() << "Custom function table: " << Configuration.CustomFunctionTable << "\n";
+
     llvm::outs() << '\n'
                  << " === clang-type-erase ===\n"
                  << " === File: " << Configuration.SourceFile << '\n'
@@ -212,16 +227,23 @@ int main(int Argc, const char **Argv)
     if( boost::filesystem::equivalent(boost::filesystem::path(Configuration.TargetDir),
                                       boost::filesystem::path(Configuration.SourceFile).remove_filename()) )
     {
-        llvm::outs() << "In-place generation of interfaces is not yet allowed.\n";
+        llvm::outs() << "In-place generation of interfaces is not yet supported.\n";
         return 1;
     }
 
-    copyFile("/home/lars/Libraries/llvm2/tools/clang/tools/extra/clang-type-erase/files/type_erasure_util.h",
-             Configuration.UtilDir,
-             "type_erasure_util.h");
-    copyFile("/home/lars/Libraries/llvm2/tools/clang/tools/extra/clang-type-erase/files/storage.h",
-             Configuration.UtilDir,
-             "storage.h");
+    if(Configuration.CustomFunctionTable)
+    {
+        copyFile("/home/lars/Libraries/llvm2/tools/clang/tools/extra/clang-type-erase/files/type_erasure_util.h",
+                 Configuration.UtilDir,
+                 "type_erasure_util.h");
+        copyFile("/home/lars/Libraries/llvm2/tools/clang/tools/extra/clang-type-erase/files/storage.h",
+                 Configuration.UtilDir,
+                 "storage.h");
+    } else {
+        copyFile("/home/lars/Libraries/llvm2/tools/clang/tools/extra/clang-type-erase/files/SmartPointerStorage.h",
+                 Configuration.UtilDir,
+                 "SmartPointerStorage.h");
+    }
     copyFile(Configuration.SourceFile,
              Configuration.TargetDir,
              boost::filesystem::path(Configuration.SourceFile).filename().c_str());
@@ -235,6 +257,8 @@ int main(int Argc, const char **Argv)
     const auto Result = Tool.run(std::make_unique<type_erasure::TypeErasureActionFactory>(Configuration).get());
     llvm::outs() << " === Elapsed time: " << duration_cast<milliseconds>(steady_clock::now() - StartTime).count() << "ms\n"
                  << " ===\n";
+
+
     formatGeneratedFiles(Configuration);
 
     return Result;
