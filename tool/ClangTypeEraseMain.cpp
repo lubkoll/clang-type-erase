@@ -52,6 +52,10 @@ cl::opt<bool> HeaderOnly("header-only",
 cl::alias HeaderOnlyAlias("ho", cl::desc("Alias for -header-only"),
                           cl::aliasopt(HeaderOnly));
 
+cl::opt<bool> UseCppConcepts("use-cpp-concepts",
+                             cl::desc("R(use built-in concept implementation)",
+                                      cl::cat(ClangTypeEraseCategory));
+
 cl::opt<bool> CustomFunctionTable("custom",
                          cl::desc(R"(custom function table)"),
                          cl::cat(ClangTypeEraseCategory));
@@ -142,6 +146,7 @@ void readCommandLine(type_erasure::Config& Configuration)
     Configuration.SmallBufferOptimization = SmallBufferOptimization;
     Configuration.NonCopyable = NonCopyable;
     Configuration.HeaderOnly = HeaderOnly;
+    Configuration.UseCppConcepts = UseCppConcepts;
     Configuration.CustomFunctionTable = CustomFunctionTable;
     //    config.no_rtti = NoRTTI;
     Configuration.BufferSize = BufferSize;

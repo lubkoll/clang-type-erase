@@ -4,6 +4,7 @@
 #include "clang/Frontend/PreprocessorOutputOptions.h"
 #include "clang/Lex/Token.h"
 
+#include "PreprocessorCallback.h"
 #include "Utils.h"
 
 #include <algorithm>
@@ -19,6 +20,7 @@ namespace clang
     {
         namespace
         {
+            const auto WRAPPER = "Wrapper";
             const auto ConstructorPlaceholder = "[[CONSTRUCTOR_PLACEHOLDER]]";
             const auto ConstructorPlaceholderRegex = std::regex("\\[\\[CONSTRUCTOR_PLACEHOLDER\\]\\]");
 
@@ -197,8 +199,15 @@ namespace clang
                 else
                     Stream << "typename std::enable_if";
 
-                Stream << "<" << DetailNamespace << "::Concept<" << ClassName << ", "
-                       << decayed(Type, Configuration) << ">::value>";
+                if(Configuration.CustomFunctionTable)
+                {
+                    Stream << "<" << DetailNamespace << "::Concept<" << ClassName << ", "
+                           << decayed(Type, Configuration) << ">::value>";
+                }
+                else
+                {
+                    Stream << "<!std::is_same<" << decayed(Type, Configuration) << "," << ClassName << ">::value>";
+                }
 
                 if(Configuration.CppStandard < 14)
                     Stream << "::type";
@@ -262,10 +271,20 @@ namespace clang
                                      const std::string& ClassName,
                                      const Config& Configuration)
             {
-                File << "private:\n"
-                     << ClassName << "Detail::" << Configuration.FunctionTableType << "<" << ClassName
-                     << "> " << Configuration.FunctionTableObject << ";\n"
-                     << Configuration.StorageType << " " << Configuration.StorageObject << ";\n";
+                if(Configuration.CustomFunctionTable)
+                {
+                    File << "private:\n"
+                         << ClassName << "Detail::" << Configuration.FunctionTableType << "<" << ClassName
+                         << "> " << Configuration.FunctionTableObject << ";\n"
+                         << Configuration.StorageType << " " << Configuration.StorageObject << ";\n";
+                }
+                else
+                {
+                    File << "private:\n" << Configuration.StorageType << "<Interface, " << WRAPPER;
+                    if(Configuration.SmallBufferOptimization)
+                        File << "," << Configuration.BufferSize;
+                    File <<  "> " << Configuration.StorageObject << ";\n";
+                }
             }
 
             template <class Decl>
@@ -293,7 +312,7 @@ namespace clang
 
 
         InterfaceGenerator::InterfaceGenerator(const char* FileName,
-                                               const ASTContext& Context,
+                                               ASTContext& Context,
                                                Preprocessor& PP,
                                                const Config& Configuration,
                                                const std::vector<std::string>& Includes)
@@ -302,16 +321,23 @@ namespace clang
               PP(PP),
               Configuration(Configuration)
         {
+            PP.addPPCallbacks(std::make_unique<PreprocessorCallback>(InterfaceFile, Context, PP));
+
             utils::writeNoOverwriteWarning(InterfaceFile, Configuration);
             InterfaceFile << "#pragma once\n\n";
-            if(Configuration.CopyOnWrite)
-                InterfaceFile << "#include <memory>\n\n";
 
             for(const auto& Include : Includes)
                 InterfaceFile << Include << '\n';
-
-            InterfaceFile << "#include " << Configuration.StorageInclude << "\n";
             InterfaceFile << '\n';
+
+            InterfaceFile << "#include " << Configuration.StorageInclude << "\n\n";
+
+            if(Configuration.CopyOnWrite || !Configuration.CustomFunctionTable) {
+                InterfaceFile << "#include <memory>\n";
+            }
+
+            if(!Configuration.CustomFunctionTable)
+                InterfaceFile << "#include <type_traits>\n\n";
         }
 
         InterfaceGenerator::~InterfaceGenerator()
@@ -367,76 +393,9 @@ namespace clang
             if(std::distance(Declaration->method_begin(), Declaration->method_end()) == 0)
                 return true;
 
-            const auto ClassName = Declaration->getName().str();
-            CurrentClass = ClassName;
-
-            std::stringstream ClassStream;
-            if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
-                copyComment(ClassStream, *Comment, Context.getSourceManager());
-            ClassStream << "class " << ClassName << "\n"
-                        << "{\n"
-                        << "public:\n"
-                        << getAliasesAndStaticMemberPlaceholder(CurrentClass) << "\n\n";
-            writeConstructors(ClassStream, ClassName, Configuration);
-            writeOperators(ClassStream, ClassName, Configuration);
-
-            std::vector<std::string> FunctionNames;
-            std::for_each(Declaration->method_begin(),
-                          Declaration->method_end(),
-                          [this,&Declaration,&FunctionNames,&ClassName,&ClassStream](const auto& Method)
-            {
-                if(!Method->isUserProvided())
-                    return;
-                if(auto Comment = Context.getCommentForDecl(Method, &PP))
-                    copyComment(ClassStream, *Comment, Context.getSourceManager());
-
-                FunctionNames.emplace_back(utils::getFunctionName(*Method));
-                const auto ReturnType = Method->getReturnType().getAsString(printingPolicy());
-                ClassStream << ReturnType << ' '
-                            << Method->getNameAsString() << "(";
-                if(!Method->param_empty())
-                    std::for_each(Method->param_begin(),
-                                  Method->param_end(),
-                                  [&Method,&ClassStream](const auto& Param)
-                    {
-                        ClassStream << Param->getType().getAsString(printingPolicy()) << ' ' << Param->getNameAsString();
-                        if(&(*(Method->param_end()-1)) != &Param)
-                            ClassStream << ", ";
-                    });
-
-
-                ClassStream << ")" << (Method->isConst() ? " const" : "")
-                            << "{\n"
-                            << "assert(" << Configuration.StorageObject << ");\n"
-                            << (ReturnType == "void" ? "" : "return ")
-                            << Configuration.FunctionTableObject << "." << utils::getFunctionName(*Method)
-                            << '('
-                            << (utils::returnsClassNameRef(*Method, ClassName) ? "*this, " : "")
-                            << Configuration.StorageObject
-                            << (Method->param_empty() ? "" : ", ")
-                            << utils::useFunctionArgumentsInInterface(*Method, ClassName, Configuration)
-                            << ");\n"
-                            << "}\n\n";
-            });
-
-            writeCasts(ClassStream, Configuration);
-            writePrivateSection(ClassStream, ClassName, Configuration);
-            ClassStream << "};\n";
-
-            const auto Initializer = std::accumulate(begin(FunctionNames),
-                                                     end(FunctionNames),
-                                                     std::string(),
-                                                     [&ClassName,&FunctionNames](std::string Initializer, const std::string& FunctionName)
-            {
-                return Initializer += "&" + ClassName + "Detail::execution_wrapper<" + ClassName +
-                                      ", type_erasure_table_detail::remove_reference_wrapper_t<std::decay_t<T>>>::" +
-                                      FunctionName + (&FunctionNames.back() != &FunctionName ? ", " : "");
-            });
-
-            InterfaceFileStream << getClassPlaceholder(Interfaces.size());
-            Interfaces.emplace_back(CurrentClass,
-                                    std::regex_replace(ClassStream.str(), ConstructorPlaceholderRegex, Initializer));
-            return true;
+            return Configuration.CustomFunctionTable
+                    ? VisitCustomCXXRecordDecl(Declaration)
+                    : VisitSimpleCXXRecordDecl(Declaration);
         }
 
         bool InterfaceGenerator::VisitVarDecl(VarDecl* Declaration)
@@ -554,5 +513,176 @@ namespace clang
         {
             return InterfaceFile;
         }
+
+        bool InterfaceGenerator::VisitSimpleCXXRecordDecl(CXXRecordDecl* Declaration)
+        {
+            const auto ClassName = Declaration->getName().str();
+            CurrentClass = ClassName;
+
+            std::stringstream ClassStream;
+            if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+                copyComment(ClassStream, *Comment, Context.getSourceManager());
+            ClassStream << "class " << ClassName << "\n"
+                        << "{\n"
+                        << "public:\n"
+                        << getAliasesAndStaticMemberPlaceholder(CurrentClass) << "\n\n";
+            writeConstructors(ClassStream, ClassName, Configuration);
+            writeOperators(ClassStream, ClassName, Configuration);
+
+            std::vector<std::string> FunctionNames;
+            std::for_each(Declaration->method_begin(),
+                          Declaration->method_end(),
+                          [this,&Declaration,&FunctionNames,&ClassName,&ClassStream](const auto& Method)
+            {
+                if(!Method->isUserProvided())
+                    return;
+                if(auto Comment = Context.getCommentForDecl(Method, &PP))
+                    copyComment(ClassStream, *Comment, Context.getSourceManager());
+
+                FunctionNames.emplace_back(utils::getFunctionName(*Method));
+                const auto ReturnType = Method->getReturnType().getAsString(printingPolicy());
+                ClassStream << ReturnType << ' '
+                            << Method->getNameAsString() << "(";
+                if(!Method->param_empty())
+                    std::for_each(Method->param_begin(),
+                                  Method->param_end(),
+                                  [&Method,&ClassStream](const auto& Param)
+                    {
+                        ClassStream << Param->getType().getAsString(printingPolicy()) << ' ' << Param->getNameAsString();
+                        if(&(*(Method->param_end()-1)) != &Param)
+                            ClassStream << ", ";
+                    });
+
+
+                ClassStream << ")" << (Method->isConst() ? " const" : "")
+                            << "{\n"
+                            << "assert(" << Configuration.StorageObject << ");\n"
+                            << (ReturnType == "void" ? "" : "return ")
+                            << Configuration.FunctionTableObject << "." << utils::getFunctionName(*Method)
+                            << '('
+                            << (utils::returnsClassNameRef(*Method, ClassName) ? "*this, " : "")
+                            << Configuration.StorageObject
+                            << (Method->param_empty() ? "" : ", ")
+                            << utils::useFunctionArgumentsInInterface(*Method, ClassName, Configuration)
+                            << ");\n"
+                            << "}\n\n";
+            });
+
+            writeCasts(ClassStream, Configuration);
+            writePrivateSection(ClassStream, ClassName, Configuration);
+            ClassStream << "};\n";
+
+            const auto Initializer = std::accumulate(begin(FunctionNames),
+                                                     end(FunctionNames),
+                                                     std::string(),
+                                                     [&ClassName,&FunctionNames](std::string Initializer, const std::string& FunctionName)
+            {
+                return Initializer += "&" + ClassName + "Detail::execution_wrapper<" + ClassName +
+                                      ", type_erasure_table_detail::remove_reference_wrapper_t<std::decay_t<T>>>::" +
+                                      FunctionName + (&FunctionNames.back() != &FunctionName ? ", " : "");
+            });
+
+            InterfaceFileStream << getClassPlaceholder(Interfaces.size());
+            Interfaces.emplace_back(CurrentClass,
+                                    std::regex_replace(ClassStream.str(), ConstructorPlaceholderRegex, Initializer));
+            return true;
+        }
+
+        bool InterfaceGenerator::VisitCustomCXXRecordDecl(CXXRecordDecl* Declaration)
+        {
+            const auto ClassName = Declaration->getName().str();
+            CurrentClass = ClassName;
+
+            std::stringstream ClassStream;
+            std::stringstream BaseImplStream;
+            std::stringstream ForwardingStream;
+            if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+                copyComment(ClassStream, *Comment, Context.getSourceManager());
+            ClassStream << "class " << ClassName << "\n"
+                        << "{\n";
+            ClassStream << "struct Interface { virtual ~Interface() = default; "
+                        << "virtual " << (Configuration.CopyOnWrite || Configuration.SmallBufferOptimization
+                                          ? "std::shared_ptr<Interface>"
+                                          : "std::unique_ptr<Interface>")
+                        << "clone() const = 0;";
+            BaseImplStream << "template <class Impl> struct " << WRAPPER << " : Interface {"
+                           << "template <class T> " << WRAPPER <<"(T&& t) : impl(std::forward<T>(t)){}\n\n";
+            if(Configuration.CopyOnWrite || Configuration.SmallBufferOptimization)
+                BaseImplStream << "std::shared_ptr<Interface> clone() const {"
+                               << "return std::make_shared<" << WRAPPER << "<Impl>>(impl);";
+            else
+                BaseImplStream << "std::unique_ptr<Interface> clone() const {"
+                               << "return std::make_unique<" << WRAPPER << "<Impl>>(impl);";
+            BaseImplStream << "}\n\n";
+
+            std::for_each(Declaration->method_begin(),
+                          Declaration->method_end(),
+                          [this,&Declaration,&ClassName,
+                           &ClassStream,&BaseImplStream,&ForwardingStream](const auto& Method)
+            {
+                if(!Method->isUserProvided())
+                    return;
+                if(auto Comment = Context.getCommentForDecl(Method, &PP))
+                    copyComment(ForwardingStream, *Comment, Context.getSourceManager());
+
+                const auto ReturnType = Method->getReturnType().getAsString(printingPolicy());
+                std::stringstream SignatureStream;
+
+                SignatureStream << ReturnType << ' '
+                            << Method->getNameAsString() << "(";
+                if(!Method->param_empty())
+                    std::for_each(Method->param_begin(),
+                                  Method->param_end(),
+                                  [&Method,&SignatureStream](const auto& Param)
+                    {
+                        SignatureStream << Param->getType().getAsString(printingPolicy()) << ' ' << Param->getNameAsString();
+                        if(&(*(Method->param_end()-1)) != &Param)
+                            SignatureStream << ", ";
+                    });
+                SignatureStream << ")" << (Method->isConst() ? " const" : "");
+                const auto Signature = SignatureStream.str();
+
+                auto ForwardingWrite =
+                        [&](const auto& StorageObject, const auto& Accessor, auto& Stream, std::string Override="")
+                {
+                    Stream << Signature << " " << Override << " "
+                           << "{\n"
+                           << (ReturnType == "void" ? "" : "return ")
+                           << StorageObject << Accessor << Method->getNameAsString()
+                           << '('
+                           << utils::useFunctionArgumentsInInterface(*Method, ClassName, Configuration)
+                           << ");\n"
+                           << "}\n\n";
+
+                };
+
+                ClassStream << "virtual " << Signature << " = 0;";
+                ForwardingWrite("impl", ".", BaseImplStream, "override");
+                ForwardingWrite(Configuration.StorageObject, "->", ForwardingStream);
+            });
+
+            ClassStream << "};\n\n";
+            BaseImplStream << "Impl impl;};\n\n"
+                           << "template <class Impl> struct " << WRAPPER << "<std::reference_wrapper<Impl>>"
+                           << " : " << WRAPPER << "<Impl&>{"
+                           << "template <class T> " << WRAPPER <<"(T&& t) : " << WRAPPER << "<Impl&>(std::forward<T>(t)){}\n\n"
+                           << "};\n\n";
+            ClassStream << BaseImplStream.str() << "\n"
+                        << "public:\n"
+                        << getAliasesAndStaticMemberPlaceholder(CurrentClass) << "\n\n";
+
+            writeConstructors(ClassStream, ClassName, Configuration);
+            ClassStream << ForwardingStream.str();
+            writeOperators(ClassStream, ClassName, Configuration);
+
+            writeCasts(ClassStream, Configuration);
+            writePrivateSection(ClassStream, ClassName, Configuration);
+            ClassStream << "};\n";
+
+            InterfaceFileStream << getClassPlaceholder(Interfaces.size());
+            Interfaces.emplace_back(CurrentClass, ClassStream.str());
+            return true;
+        }
+
     }
 }

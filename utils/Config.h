@@ -17,6 +17,7 @@ namespace clang
             bool HeaderOnly = true;
             bool NoRTTI = false;
             bool NoOverwriteWarning = false;
+            bool UseCppConcepts = false;
             unsigned BufferSize = 128;
             unsigned CppStandard = 11;
             std::string InterfaceType = "Interface";

@@ -47,6 +47,8 @@ namespace clang
 
             std::vector<std::string> getInterfaceIncludes(const Config& Configuration)
             {
+                if(!Configuration.CustomFunctionTable)
+                    return {};
                 const auto Open = std::string("#include <");
                 const auto Close = std::string(">");
                 return { Open + getRelativePath(getTableFile(Configuration), Configuration.IncludeDir).c_str() + Close };
@@ -61,29 +63,31 @@ namespace clang
         TypeErasureGenerator::TypeErasureGenerator(ASTContext& Context,
                                                    Preprocessor& PP,
                                                    const Config& Configuration)
-            : TableGeneration(getTableFile(Configuration).c_str(),
-                               Context,
-                               Configuration),
-              InterfaceGeneration(getInterfaceFile(Configuration).c_str(),
+            : InterfaceGeneration(getInterfaceFile(Configuration).c_str(),
                                   Context,
                                   PP,
                                   Configuration,
                                   getInterfaceIncludes(Configuration))
         {
-            PP.addPPCallbacks(std::make_unique<PreprocessorCallback>(TableGeneration.getFileStream(), Context, PP));
-            PP.addPPCallbacks(std::make_unique<PreprocessorCallback>(InterfaceGeneration.getFileStream(), Context, PP));
+            if(Configuration.CustomFunctionTable)
+                TableGeneration = std::make_unique<TableGenerator>(getTableFile(Configuration).c_str(),
+                                                                   Context,
+                                                                   PP,
+                                                                   Configuration);
         }
 
         bool TypeErasureGenerator::VisitNamespaceDecl(NamespaceDecl* Declaration)
         {
-            TableGeneration.VisitNamespaceDecl(Declaration);
+            if(TableGeneration)
+                TableGeneration->VisitNamespaceDecl(Declaration);
             InterfaceGeneration.VisitNamespaceDecl(Declaration);
             return true;
         }
 
         bool TypeErasureGenerator::VisitCXXRecordDecl(CXXRecordDecl* Declaration)
         {
-            TableGeneration.VisitCXXRecordDecl(Declaration);
+            if(TableGeneration)
+                TableGeneration->VisitCXXRecordDecl(Declaration);
             InterfaceGeneration.VisitCXXRecordDecl(Declaration);
             return true;
         }
@@ -164,13 +168,13 @@ namespace clang
 
             std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance& Compiler, llvm::StringRef) override
             {
-                if(Configuration.CustomFunctionTable)
+//                if(Configuration.CustomFunctionTable)
                     return std::unique_ptr<ASTConsumer>(new TypeErasureConsumer(Compiler.getASTContext(),
                                                                                 Compiler.getPreprocessor(),
                                                                                 Configuration));
-                return std::unique_ptr<ASTConsumer>(new SimpleTypeErasureConsumer(Compiler.getASTContext(),
-                                                                            Compiler.getPreprocessor(),
-                                                                            Configuration));
+//                return std::unique_ptr<ASTConsumer>(new SimpleTypeErasureConsumer(Compiler.getASTContext(),
+//                                                                            Compiler.getPreprocessor(),
+//                                                                            Configuration));
             }
 
         private:

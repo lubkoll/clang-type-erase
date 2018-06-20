@@ -46,7 +46,7 @@ namespace clang
             bool VisitFunctionTemplateDecl(FunctionTemplateDecl* Declaration);
 
         private:
-            TableGenerator TableGeneration;
+            std::unique_ptr<TableGenerator> TableGeneration;
             InterfaceGenerator InterfaceGeneration;
         };
 

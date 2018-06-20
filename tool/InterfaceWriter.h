@@ -35,7 +35,7 @@ namespace clang
 
         public:
             InterfaceGenerator(const char* FileName,
-                               const ASTContext& Context,
+                               ASTContext& Context,
                                Preprocessor& PP,
                                const Config& Configuration = Config(),
                                const std::vector<std::string>& Includes = {});
@@ -59,9 +59,12 @@ namespace clang
             std::ofstream& getFileStream();
 
         private:
+            bool VisitSimpleCXXRecordDecl(CXXRecordDecl* Declaration);
+            bool VisitCustomCXXRecordDecl(CXXRecordDecl* Declaration);
+
             std::ofstream InterfaceFile;
             std::stringstream InterfaceFileStream;
-            const ASTContext& Context;
+            ASTContext& Context;
             Preprocessor& PP;
             Config Configuration;
             std::stack<std::string> OpenNamespaces;

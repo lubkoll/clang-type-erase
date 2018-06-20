@@ -5,6 +5,6 @@ RUN apt-get update && apt-get install -y software-properties-common
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test
 RUN apt-get update && apt-get install -y cmake doxygen graphviz git rbenv gcc-6 g++-6 ninja-build
 RUN mkdir /home/deps && mkdir /home/deps/googletest && git clone https://github.com/google/googletest.git /home/deps/googletest
-RUN mkdir /home/deps/clang-llvm && cd /home/deps/clang-llvm && git clone http://llvm.org/git/llvm.git && cd llvm/tools && git clone http://llvm.org/git/clang.git && cd clang/tools && git clone http://llvm.org/git/clang-tools-extra.git extra && cd /home/deps/clang-llvm && mkdir build && cd build && cmake -G Ninja -DCMAKE_CXX_COMPILER=$(which g++-6) -DCMAKE_C_COMPILER=$(which gcc-6) ../llvm && ninja && ninja install
+RUN mkdir /home/deps/clang-llvm && cd /home/deps/clang-llvm && git clone http://llvm.org/git/llvm.git && cd llvm/tools && git clone http://llvm.org/git/clang.git && cd clang/tools && git clone http://llvm.org/git/clang-tools-extra.git extra
 
 WORKDIR /home

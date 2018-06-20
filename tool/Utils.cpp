@@ -12,11 +12,18 @@ namespace clang
 {
     namespace type_erasure
     {
-        const PrintingPolicy& printingPolicy()
+        PrintingPolicy createPrintingPolicy()
         {
-            static PrintingPolicy PrintUnqualified{LangOptions{}};
+            PrintingPolicy PrintUnqualified{LangOptions{}};
             PrintUnqualified.adjustForCPlusPlus();
             PrintUnqualified.SuppressScope = true;
+            return PrintUnqualified;
+
+        }
+
+        const PrintingPolicy& printingPolicy()
+        {
+            static PrintingPolicy PrintUnqualified = createPrintingPolicy();
             return PrintUnqualified;
         }
 
@@ -118,6 +125,28 @@ namespace clang
                     {
                         Stream << " , " << replaceClassNameInParam(Param->getType().getAsString(printingPolicy()), ClassName, Storage)
                                << (PrintNames ? (' ' + Param->getNameAsString()).c_str() : "");
+                    });
+
+                return Stream.str();
+            }
+
+            std::string getPlainFunctionArguments(const CXXMethodDecl& Method,
+                                                  const std::string& ClassName,
+                                                  const std::string& NewClassName)
+            {
+                std::stringstream Stream;
+                bool FirstMethod = true;
+                if(!Method.param_empty())
+                    std::for_each(Method.param_begin(),
+                                  Method.param_end(),
+                                  [&Stream,&ClassName,&NewClassName,&FirstMethod](const auto& Param)
+                    {
+                        if(FirstMethod){
+                            Stream << " , ";
+                            FirstMethod = false;
+                        }
+                        Stream << replaceClassNameInParam(Param->getType().getAsString(printingPolicy()), ClassName, NewClassName)
+                               << Param->getNameAsString().c_str();
                     });
 
                 return Stream.str();
