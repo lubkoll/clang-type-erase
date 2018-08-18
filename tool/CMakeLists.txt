@@ -20,7 +20,7 @@ add_dependencies(clang-type-erase
 include_directories(/home/lars/Libraries/build-boost-clang/include)
 link_directories(/home/lars/Libraries/build-boost-clang/lib)
 
-target_link_libraries(clang-type-erase
+target_link_libraries(clang-type-erase PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
