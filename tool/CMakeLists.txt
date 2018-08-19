@@ -2,8 +2,6 @@ set(LLVM_LINK_COMPONENTS
   support
   )
 
-set(CMAKE_BUILD_TYPE Release)
-add_definitions("-fexceptions")
 add_clang_executable(clang-type-erase
   ClangTypeEraseMain.cpp
   TableWriter.cpp
