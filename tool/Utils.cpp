@@ -42,7 +42,7 @@ namespace clang
                                                     const std::string& NewClassName)
                 {
                     return std::regex_replace(Str, std::regex(ClassName), NewClassName);
-                };
+                }
 
 
                 bool isMovable(const std::string& Type)
@@ -285,7 +285,7 @@ std::regex(".*&\\s*"));
                            std::string(Configuration.InterfaceType) +
                            (IsReference ? " &" : "");
                 return std::make_tuple(std::move(Str),IsReference);
-            };
+            }
 
 
             std::string getFunctionPointer(const CXXMethodDecl& Method,
