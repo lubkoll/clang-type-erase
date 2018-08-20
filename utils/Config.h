@@ -18,6 +18,7 @@ namespace clang
             bool NoRTTI = false;
             bool NoOverwriteWarning = false;
             bool UseCppConcepts = false;
+            bool CustomFunctionTable = false;
             unsigned BufferSize = 128;
             unsigned CppStandard = 11;
             std::string InterfaceType = "Interface";
