@@ -53,8 +53,8 @@ cl::alias HeaderOnlyAlias("ho", cl::desc("Alias for -header-only"),
                           cl::aliasopt(HeaderOnly));
 
 cl::opt<bool> UseCppConcepts("use-cpp-concepts",
-                             cl::desc("R(use built-in concept implementation)",
-                                      cl::cat(ClangTypeEraseCategory));
+                             cl::desc(R"(use built-in concept implementation)"),
+                             cl::cat(ClangTypeEraseCategory));
 
 cl::opt<bool> CustomFunctionTable("custom",
                          cl::desc(R"(custom function table)"),
@@ -75,7 +75,7 @@ cl::alias CppStandardAlias("cpp", cl::desc("Alias for -cpp-standard"),
                            cl::aliasopt(CppStandard));
 
 cl::opt<std::string> IncludeDir("include-dir",
-                                cl::desc(R"(include directory (used for the determination of inclusion directives)))"),
+                                cl::desc(R"(include directory (used for the determination of inclusion directives))"),
                                 cl::init(""),
                                 cl::cat(ClangTypeEraseCategory));
 
