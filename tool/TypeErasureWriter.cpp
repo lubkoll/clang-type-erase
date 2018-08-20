@@ -8,6 +8,8 @@
 #include "PreprocessorCallback.h"
 #include "SimpleInterfaceWriter.h"
 
+#include <numeric>
+
 namespace clang
 {
     namespace type_erasure
