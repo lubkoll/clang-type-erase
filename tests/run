@@ -4,12 +4,10 @@ INTERFACE_FILE=interface.hh
 GIVEN_INTERFACE=plain_interface.hh
 CLANG_TYPE_ERASE=$1
 
-echo $CWD
-
 function prepare_test_case {
   mkdir -p $1
   cp ../$1/* $1/
-  python2 ../generate_tests.py --namespace-name $2 --class-name "Fooable" --test-file $1/interface_test.cpp --form ../interface_test.form $3
+  python2.7 ../generate_tests.py --namespace-name $2 --class-name "Fooable" --test-file $1/interface_test.cpp --form ../interface_test.form $3
   cd $1
   ../../generate_given_interface $2 $GIVEN_INTERFACE
   mkdir -p Interface
@@ -21,7 +19,7 @@ function prepare_test_case {
 function prepare_vtable_test_case {
   mkdir -p $1
   cp ../$1/* $1/
-  python2 ../generate_tests.py --namespace-name $2 --class-name "Fooable" --test-file $1/interface_test.cpp --form ../vtable_interface_test.form $3
+  python2.7 ../generate_tests.py --namespace-name $2 --class-name "Fooable" --test-file $1/interface_test.cpp --form ../vtable_interface_test.form $3
   cd $1
   ../../generate_given_interface $2 $GIVEN_INTERFACE
   mkdir -p Interface
@@ -51,4 +49,4 @@ prepare_vtable_test_case vtable_sbo_cow VTableSBOCOW --sbo --cow
 cd ..
 
 # run unit tests
-rm -rf build && mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && make && ./unit_tests && cd ..
+rm -rf build && mkdir build && cd build && cmake .. && make && ./unit_tests && cd ..
