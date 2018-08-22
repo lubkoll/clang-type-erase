@@ -1,0 +1,14 @@
+sudo: required
+
+language: c++
+
+services:
+  - docker
+
+install:
+  - TOOL_SHARED="/home/deps/clang-llvm/llvm/tools/clang/tools/extra/clang-type-erase"
+  - docker pull lubkoll/clang-type-erase:ci
+
+script:
+  - docker run --rm -ti -v ${TRAVIS_BUILD_DIR}:${TOOL_SHARED} -w ${TOOL_SHARED} lubkoll/clang-type-erase:ci ${TOOL_SHARED}/run_test_in_docker.sh
+
