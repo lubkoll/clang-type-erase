@@ -2,7 +2,7 @@
 
 INTERFACE_FILE=interface.hh
 GIVEN_INTERFACE=plain_interface.hh
-CLANG_PATH=$1
+CLANG_TYPE_ERASE=$1
 
 echo $CWD
 
@@ -14,7 +14,7 @@ function prepare_test_case {
   ../../generate_given_interface $2 $GIVEN_INTERFACE
   mkdir -p Interface
   cp $GIVEN_INTERFACE Interface/$INTERFACE_FILE
-  ./generate_interface $INTERFACE_FILE $GIVEN_INTERFACE $CLANG_PATH
+  ./generate_interface $INTERFACE_FILE $GIVEN_INTERFACE $CLANG_TYPE_ERASE
   cd ..
 }
 
@@ -26,7 +26,7 @@ function prepare_vtable_test_case {
   ../../generate_given_interface $2 $GIVEN_INTERFACE
   mkdir -p Interface
   cp $GIVEN_INTERFACE Interface/$INTERFACE_FILE
-  ./generate_interface $INTERFACE_FILE $GIVEN_INTERFACE $CLANG_PATH
+  ./generate_interface $INTERFACE_FILE $GIVEN_INTERFACE $CLANG_TYPE_ERASE
   cd ..
 }
 

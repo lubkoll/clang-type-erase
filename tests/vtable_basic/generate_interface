@@ -7,7 +7,7 @@ UTIL_DIR="gen/vtable_basic"
 DETAIL_DIR=.
 INCLUDE_DIR=../../
 
-COMMAND=/home/lars/Libraries/build-llvm2/bin/clang-type-erase
+COMMAND=$3
 COMMON_ARGS="-detail-dir=$DETAIL_DIR -include-dir=$INCLUDE_DIR -util-dir=$UTIL_DIR -util-include-dir=<$UTIL_DIR/type_erasure_util.h> -storage-include-dir=<$UTIL_DIR/storage.h>"
 
 function generate_interface {
