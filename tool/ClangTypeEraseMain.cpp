@@ -260,9 +260,9 @@ int main(int Argc, const char **Argv)
         copyFile("/home/lars/Libraries/llvm2/tools/clang/tools/extra/clang-type-erase/files/type_erasure_util.h",
                  Configuration.UtilDir,
                  "type_erasure_util.h");
-        copyFile("/home/lars/Libraries/llvm2/tools/clang/tools/extra/clang-type-erase/files/storage.h",
+        copyFile("/home/lars/Libraries/llvm2/tools/clang/tools/extra/clang-type-erase/files/Storage.h",
                  Configuration.UtilDir,
-                 "storage.h");
+                 "Storage.h");
     } else {
         copyFile("/home/lars/Libraries/llvm2/tools/clang/tools/extra/clang-type-erase/files/SmartPointerStorage.h",
                  Configuration.UtilDir,
