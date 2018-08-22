@@ -223,14 +223,23 @@ namespace clang
                 // default constructor
                 File << ClassName << "() noexcept = default;\n\n";
 
-                auto decT = decayed("T", Configuration);
                 // construct from implementation
-                File << "template <class T,\n"
-                     << enable_if("T", ClassName, ClassName + "Detail", Configuration) << ">\n"
-                     << ClassName << "(T&& value)\n"
-                     << ": " << Configuration.FunctionTableObject << "( {\n";
-                File << ConstructorPlaceholder << "} )";
-                File << ", \n" << Configuration.StorageObject << "(std::forward<T>(value))\n{}" << "\n\n";
+                if(Configuration.CustomFunctionTable)
+                {
+                    File << "template <class T,\n"
+                         << enable_if("T", ClassName, ClassName + "Detail", Configuration) << ">\n"
+                         << ClassName << "(T&& value)\n"
+                         << ": " << Configuration.FunctionTableObject << "( {\n"
+                         << ConstructorPlaceholder << "} )"
+                         << ", \n" << Configuration.StorageObject << "(std::forward<T>(value))\n{}" << "\n\n";
+                }
+                else
+                {
+                    File << "template <class T,\n"
+                         << enable_if("T", ClassName, ClassName + "Detail", Configuration) << ">\n"
+                         << ClassName << "(T&& value)\n"
+                         << ": " << Configuration.StorageObject << "(std::forward<T>(value))\n{}" << "\n\n";
+                }
             }
 
             void writeOperators(std::ostream& File,
@@ -393,6 +402,7 @@ namespace clang
             if(std::distance(Declaration->method_begin(), Declaration->method_end()) == 0)
                 return true;
 
+            llvm::outs() << "CUSTOM FUNCTION TABLE: " << Configuration.CustomFunctionTable << "\n";
             return Configuration.CustomFunctionTable
                     ? VisitCustomCXXRecordDecl(Declaration)
                     : VisitSimpleCXXRecordDecl(Declaration);
@@ -514,7 +524,7 @@ namespace clang
             return InterfaceFile;
         }
 
-        bool InterfaceGenerator::VisitSimpleCXXRecordDecl(CXXRecordDecl* Declaration)
+        bool InterfaceGenerator::VisitCustomCXXRecordDecl(CXXRecordDecl* Declaration)
         {
             const auto ClassName = Declaration->getName().str();
             CurrentClass = ClassName;
@@ -588,7 +598,7 @@ namespace clang
             return true;
         }
 
-        bool InterfaceGenerator::VisitCustomCXXRecordDecl(CXXRecordDecl* Declaration)
+        bool InterfaceGenerator::VisitSimpleCXXRecordDecl(CXXRecordDecl* Declaration)
         {
             const auto ClassName = Declaration->getName().str();
             CurrentClass = ClassName;

@@ -52,10 +52,6 @@ cl::opt<bool> HeaderOnly("header-only",
 cl::alias HeaderOnlyAlias("ho", cl::desc("Alias for -header-only"),
                           cl::aliasopt(HeaderOnly));
 
-cl::opt<bool> UseCppConcepts("use-cpp-concepts",
-                             cl::desc(R"(use built-in concept implementation)"),
-                             cl::cat(ClangTypeEraseCategory));
-
 cl::opt<bool> CustomFunctionTable("custom",
                          cl::desc(R"(custom function table)"),
                          cl::cat(ClangTypeEraseCategory));
@@ -75,7 +71,7 @@ cl::alias CppStandardAlias("cpp", cl::desc("Alias for -cpp-standard"),
                            cl::aliasopt(CppStandard));
 
 cl::opt<std::string> IncludeDir("include-dir",
-                                cl::desc(R"(include directory (used for the determination of inclusion directives))"),
+                                cl::desc(R"(include directory (used for the determination of inclusion directives)))"),
                                 cl::init(""),
                                 cl::cat(ClangTypeEraseCategory));
 
@@ -140,13 +136,15 @@ std::string concat(const std::string& Path,
             boost::filesystem::path(Directory)).c_str();
 }
 
-void readCommandLine(type_erasure::Config& Configuration)
+type_erasure::Config getConfiguration(int Argc, const char **Argv)
 {
+    cl::ParseCommandLineOptions(Argc, Argv, "clang-type-erase.\n");
+
+    type_erasure::Config Configuration;
     Configuration.CopyOnWrite = CopyOnWrite;
     Configuration.SmallBufferOptimization = SmallBufferOptimization;
     Configuration.NonCopyable = NonCopyable;
     Configuration.HeaderOnly = HeaderOnly;
-    Configuration.UseCppConcepts = UseCppConcepts;
     Configuration.CustomFunctionTable = CustomFunctionTable;
     //    config.no_rtti = NoRTTI;
     Configuration.BufferSize = BufferSize;
@@ -188,6 +186,15 @@ void readCommandLine(type_erasure::Config& Configuration)
             Configuration.StorageType.append(Configuration.SmallBufferOptimization ? "SBOStorage" : "Storage" );
         }
     }
+
+    return Configuration;
+}
+
+bool checkInput(const type_erasure::Config& Configuration)
+{
+    if(!boost::filesystem::exists(Configuration.SourceFile))
+        return false;
+    return true;
 }
 
 void copyFile(const std::string& OriginalFile,
@@ -198,10 +205,24 @@ void copyFile(const std::string& OriginalFile,
     try {
         boost::filesystem::copy(boost::filesystem::path(OriginalFile),
                                 boost::filesystem::path(TargetDir) /= boost::filesystem::path(TargetFile));
-    } catch (...) {
-        llvm::outs() << " === Folder '" << TargetDir << "'' already contains '" << TargetFile << "'. "
-                     << "Skipping copy.\n";
+    } catch (std::exception& e) {
+        llvm::outs() << e.what() << '\n';
+        llvm::outs() << " === Cannot copy from '" << OriginalFile << "' to '" << TargetDir << "/" << TargetFile << "'.\n";
     }
+}
+
+int generateInterface(const type_erasure::Config& Configuration)
+{
+    FixedCompilationDatabase Compilations(Twine(boost::filesystem::current_path().c_str()), CC1Arguments);
+    ClangTool Tool(Compilations, SourcePaths);
+
+    using namespace std::chrono;
+    llvm::outs() << " ===\n === Generating type-erased interface '" << Configuration.SourceFile << "'\n";
+    const auto StartTime = steady_clock::now();
+    const auto Status = Tool.run(std::make_unique<type_erasure::TypeErasureActionFactory>(Configuration).get());
+    llvm::outs() << " === Elapsed time: " << duration_cast<milliseconds>(steady_clock::now() - StartTime).count() << "ms\n"
+                 << " ===\n";
+    return Status;
 }
 
 void formatGeneratedFiles(const type_erasure::Config& Configuration)
@@ -218,11 +239,9 @@ void formatGeneratedFiles(const type_erasure::Config& Configuration)
 
 int main(int Argc, const char **Argv)
 {
-    cl::ParseCommandLineOptions(Argc, Argv, "clang-type-erase.\n");
-    type_erasure::Config Configuration;
-    readCommandLine(Configuration);
-
-    llvm::outs() << "Custom function table: " << Configuration.CustomFunctionTable << "\n";
+    auto Configuration = getConfiguration(Argc, Argv);
+    if(!checkInput(Configuration))
+        return 1;
 
     llvm::outs() << '\n'
                  << " === clang-type-erase ===\n"
@@ -253,18 +272,9 @@ int main(int Argc, const char **Argv)
              Configuration.TargetDir,
              boost::filesystem::path(Configuration.SourceFile).filename().c_str());
 
-    FixedCompilationDatabase Compilations(Twine(boost::filesystem::current_path().c_str()), CC1Arguments);
-    ClangTool Tool(Compilations, SourcePaths);
-
-    using namespace std::chrono;
-    llvm::outs() << " ===\n === Generating type-erased interface '" << Configuration.SourceFile << "'\n";
-    const auto StartTime = steady_clock::now();
-    const auto Result = Tool.run(std::make_unique<type_erasure::TypeErasureActionFactory>(Configuration).get());
-    llvm::outs() << " === Elapsed time: " << duration_cast<milliseconds>(steady_clock::now() - StartTime).count() << "ms\n"
-                 << " ===\n";
-
+    int Status = generateInterface(Configuration);
 
     formatGeneratedFiles(Configuration);
 
-    return Result;
+    return Status;
 }

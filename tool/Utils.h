@@ -33,10 +33,6 @@ namespace clang
                                              const std::string& Storage,
                                              bool PrintNames=false);
 
-            std::string getPlainFunctionArguments(const CXXMethodDecl& Method,
-                                                  const std::string& ClassName,
-                                                  const std::string& NewClassName);
-
             std::string useFunctionArguments(const CXXMethodDecl& Method,
                                              const std::string& ClassName);
 

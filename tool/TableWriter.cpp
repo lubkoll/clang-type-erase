@@ -72,75 +72,52 @@ namespace clang
             }
 
             void writeConcepts(std::ofstream& Stream,
-                               const CXXRecordDecl& Declaration,
-                               const Config& Configuration)
+                               const CXXRecordDecl& Declaration)
             {
-                if(Configuration.UseCppConcepts) {
-                    const auto ClassName = Declaration.getName().str();
-                    const auto ConceptName = ClassName + "Concept";
-                    Stream << "template <class T>\n"
-                           << "concept bool " << ConceptName << "\n=\n";
-                    bool FirstMethod = true;
-                    std::for_each(Declaration.method_begin(),
-                                  Declaration.method_end(),
-                                  [&Stream,&FirstMethod,&ClassName,&ConceptName](const auto& Method)
-                    {
-                            if(!FirstMethod)
-                            {
-                                Stream << "&&\n";
-                            }
-                            Stream << "requires (" << (Method->isConst() ? "const " : "") << "T& t, " << utils::getPlainFunctionArguments(*Method, ClassName, ConceptName) << ") "
-                                   << "{ { t." << Method->getNameAsString() << "(" << utils::useFunctionArguments(*Method, ClassName) << ")} ->"
-                                   << Method->getReturnType().getAsString(printingPolicy()) << "}";
-                    });
-                    Stream << ";\n\n";
-                }
-                else {
-                    std::vector<std::string> Concepts;
-                    Concepts.reserve(std::distance(Declaration.method_begin(), Declaration.method_end()));
+                std::vector<std::string> Concepts;
+                Concepts.reserve(std::distance(Declaration.method_begin(), Declaration.method_end()));
 
-                    std::for_each(Declaration.method_begin(),
-                                  Declaration.method_end(),
-                                  [&Stream,&Declaration,&Concepts]
-                                  (const auto& Method)
-                    {
-                        if(!Method->isUserProvided())
-                            return;
-                        const auto FunctionName = utils::getFunctionName(*Method);
-                        const auto TryMemFnName = "TryMemFn_" + FunctionName;
-                        const auto HasMemFnName = "HasMemFn_" + FunctionName;
-                        Concepts.emplace_back(HasMemFnName);
-
-                        Stream << "template < class T >\n"
-                               << "using " << TryMemFnName << " = "
-                               << "decltype( std::declval<T>()." << Method->getNameAsString() << "("
-                               << utils::useFunctionArgumentsInConcepts(*Method, Declaration.getName().str())
-                               << ") );\n"
-                               << '\n'
-                               << "template < class T , class = void >\n"
-                               << "struct " << HasMemFnName << " : std::false_type"
-                               << "{};\n"
-                               << '\n'
-                               << "template < class T >\n"
-                               << "struct " << HasMemFnName
-                               << "< T , type_erasure_table_detail::voider< " << TryMemFnName << " < T > > > : std::true_type"
-                               << "{};\n\n";
-                    });
+                std::for_each(Declaration.method_begin(),
+                              Declaration.method_end(),
+                              [&Stream,&Declaration,&Concepts]
+                              (const auto& Method)
+                {
+                    if(!Method->isUserProvided())
+                        return;
+                    const auto FunctionName = utils::getFunctionName(*Method);
+                    const auto TryMemFnName = "TryMemFn_" + FunctionName;
+                    const auto HasMemFnName = "HasMemFn_" + FunctionName;
+                    Concepts.emplace_back(HasMemFnName);
 
                     Stream << "template < class T >\n"
-                           << "using " << "ConceptImpl = type_erasure_table_detail::And< \n";
-                    for(const auto& Concept : Concepts)
-                        Stream << Concept << "< type_erasure_table_detail::remove_reference_wrapper_t<T> >"
-                               << (&Concepts.back() == &Concept ? "" : ",\n");
-                    Stream << ">;\n\n"
-                           << "template <class Impl, class T, bool = std::is_base_of<Impl, T>::value>\n"
-                           << "struct Concept : std::false_type\n"
-                           << "{};\n\n"
-                           << "template <class Impl, class T>\n"
-                           << "struct Concept<Impl, T, false> : ConceptImpl <T>\n"
-                           << "{};\n";
-                }
-                }
+                           << "using " << TryMemFnName << " = "
+                           << "decltype( std::declval<T>()." << Method->getNameAsString() << "("
+                           << utils::useFunctionArgumentsInConcepts(*Method, Declaration.getName().str())
+                           << ") );\n"
+                           << '\n'
+                           << "template < class T , class = void >\n"
+                           << "struct " << HasMemFnName << " : std::false_type"
+                           << "{};\n"
+                           << '\n'
+                           << "template < class T >\n"
+                           << "struct " << HasMemFnName
+                           << "< T , type_erasure_table_detail::voider< " << TryMemFnName << " < T > > > : std::true_type"
+                           << "{};\n\n";
+                });
+
+                Stream << "template < class T >\n"
+                              << "using " << "ConceptImpl = type_erasure_table_detail::And< \n";
+                for(const auto& Concept : Concepts)
+                    Stream << Concept << "< type_erasure_table_detail::remove_reference_wrapper_t<T> >"
+                           << (&Concepts.back() == &Concept ? "" : ",\n");
+                Stream << ">;\n\n"
+                       << "template <class Impl, class T, bool = std::is_base_of<Impl, T>::value>\n"
+                       << "struct Concept : std::false_type\n"
+                       << "{};\n\n"
+                       << "template <class Impl, class T>\n"
+                       << "struct Concept<Impl, T, false> : ConceptImpl <T>\n"
+                       << "{};\n";
+            }
         }
 
         TableGenerator::TableGenerator(const char* FileName,
@@ -193,7 +170,7 @@ namespace clang
 
             writeTable(TableFile, *Declaration, Configuration);
             writeWrapper(TableFile, *Declaration, Configuration);
-            writeConcepts(TableFile, *Declaration, Configuration);
+            writeConcepts(TableFile, *Declaration);
 
             TableFile << "}\n\n";
             return true;
