@@ -219,7 +219,7 @@ bool copyFile(const std::string& TargetDir,
 {
 
     const auto OriginalFile = boost::filesystem::path(CLANG_TYPE_ERASE_INSTALL_PREFIX)/
-                              boost::filesystem::path("etc.h")/
+                              boost::filesystem::path("etc")/
                               boost::filesystem::path(FileName.c_str());
     return copyFile(OriginalFile, TargetDir, FileName);
 }
