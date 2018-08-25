@@ -86,8 +86,8 @@ cl::opt<std::string> UtilInclude("util-include-dir",
                                  cl::cat(ClangTypeEraseCategory));
 
 cl::opt<std::string> StorageInclude("storage-include-dir",
-                                    cl::desc(R"(string for including storage.h, incl. angle brackets or parenthesis)"),
-                                    cl::init("<util/storage.h>"),
+                                    cl::desc(R"(string for including Storage.h, incl. angle brackets or parenthesis)"),
+                                    cl::init("<util/Storage.h>"),
                                     cl::cat(ClangTypeEraseCategory));
 
 cl::opt<std::string> CastName("cast-name",
@@ -217,10 +217,11 @@ bool copyFile(const boost::filesystem::path& OriginalFile,
 bool copyFile(const std::string& TargetDir,
               const std::string& FileName)
 {
-
     const auto OriginalFile = boost::filesystem::path(CLANG_TYPE_ERASE_INSTALL_PREFIX)/
                               boost::filesystem::path("etc")/
                               boost::filesystem::path(FileName.c_str());
+    const auto CreateTargetDir = "mkdir -p " + TargetDir;
+    std::system(CreateTargetDir.c_str());
     return copyFile(OriginalFile, TargetDir, FileName);
 }
 
