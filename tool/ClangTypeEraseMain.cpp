@@ -197,6 +197,23 @@ bool checkInput(const type_erasure::Config& Configuration)
     return true;
 }
 
+bool copyFile(const boost::filesystem::path& OriginalFile,
+              const std::string& TargetDir,
+              const std::string& FileName)
+{
+    auto success = true;
+    llvm::outs() << " === Copying '" << OriginalFile.c_str() << "' to '" << TargetDir << "'\n";
+    try {
+        boost::filesystem::copy(OriginalFile,
+                                boost::filesystem::path(TargetDir) /= boost::filesystem::path(FileName));
+    } catch (std::exception& e) {
+        success = false;
+        llvm::outs() << e.what() << '\n';
+        llvm::outs() << " === Cannot copy from '" << OriginalFile << "' to '" << TargetDir << "/" << FileName << "'.\n";
+    }
+    return success;
+}
+
 bool copyFile(const std::string& TargetDir,
               const std::string& FileName)
 {
@@ -204,17 +221,7 @@ bool copyFile(const std::string& TargetDir,
     const auto OriginalFile = boost::filesystem::path(CLANG_TYPE_ERASE_INSTALL_PREFIX)/
                               boost::filesystem::path("etc.h")/
                               boost::filesystem::path(FileName.c_str());
-    auto success = true;
-    llvm::outs() << " === Copying '" << FileName << "' to '" << TargetDir << "'\n";
-    try {
-        boost::filesystem::copy(OriginalFile,
-                                boost::filesystem::path(TargetDir) /= boost::filesystem::path(FileName));
-    } catch (std::exception& e) {
-        success = false;
-        llvm::outs() << e.what() << '\n';
-        llvm::outs() << " === Cannot copy from 'etc/" << FileName << "' to '" << TargetDir << "/" << FileName << "'.\n";
-    }
-    return success;
+    return copyFile(OriginalFile, TargetDir, FileName);
 }
 
 int generateInterface(const type_erasure::Config& Configuration)
