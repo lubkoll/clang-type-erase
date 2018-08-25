@@ -197,18 +197,24 @@ bool checkInput(const type_erasure::Config& Configuration)
     return true;
 }
 
-void copyFile(const std::string& OriginalFile,
-              const std::string& TargetDir,
-              const std::string& TargetFile)
+bool copyFile(const std::string& TargetDir,
+              const std::string& FileName)
 {
-    llvm::outs() << " === Copying '" << TargetFile << "' to '" << TargetDir << "'\n";
+
+    const auto OriginalFile = boost::filesystem::path(CLANG_TYPE_ERASE_INSTALL_PREFIX)/
+                              boost::filesystem::path("etc.h")/
+                              boost::filesystem::path(FileName.c_str());
+    auto success = true;
+    llvm::outs() << " === Copying '" << FileName << "' to '" << TargetDir << "'\n";
     try {
-        boost::filesystem::copy(boost::filesystem::path(OriginalFile),
-                                boost::filesystem::path(TargetDir) /= boost::filesystem::path(TargetFile));
+        boost::filesystem::copy(OriginalFile,
+                                boost::filesystem::path(TargetDir) /= boost::filesystem::path(FileName));
     } catch (std::exception& e) {
+        success = false;
         llvm::outs() << e.what() << '\n';
-        llvm::outs() << " === Cannot copy from '" << OriginalFile << "' to '" << TargetDir << "/" << TargetFile << "'.\n";
+        llvm::outs() << " === Cannot copy from 'etc/" << FileName << "' to '" << TargetDir << "/" << FileName << "'.\n";
     }
+    return success;
 }
 
 int generateInterface(const type_erasure::Config& Configuration)
@@ -257,22 +263,25 @@ int main(int Argc, const char **Argv)
 
     if(Configuration.CustomFunctionTable)
     {
-        copyFile("/home/lars/Libraries/llvm2/tools/clang/tools/extra/clang-type-erase/files/type_erasure_util.h",
-                 Configuration.UtilDir,
-                 "type_erasure_util.h");
-        copyFile("/home/lars/Libraries/llvm2/tools/clang/tools/extra/clang-type-erase/files/Storage.h",
-                 Configuration.UtilDir,
-                 "Storage.h");
+        const auto SuccessfulCopy =
+                copyFile(Configuration.UtilDir, "type_erasure_util.h") &&
+        copyFile(Configuration.UtilDir, "Storage.h");
+        if(!SuccessfulCopy)
+            return 1;
     } else {
-        copyFile("/home/lars/Libraries/llvm2/tools/clang/tools/extra/clang-type-erase/files/SmartPointerStorage.h",
-                 Configuration.UtilDir,
-                 "SmartPointerStorage.h");
+        const auto SuccessfulCopy =
+                copyFile(Configuration.UtilDir, "SmartPointerStorage.h");
+        if(!SuccessfulCopy)
+            return 1;
     }
-    copyFile(Configuration.SourceFile,
-             Configuration.TargetDir,
-             boost::filesystem::path(Configuration.SourceFile).filename().c_str());
+    const auto SuccessfulCopy =
+            copyFile(Configuration.SourceFile,
+                     Configuration.TargetDir,
+                     boost::filesystem::path(Configuration.SourceFile).filename().c_str());
+    if(!SuccessfulCopy)
+        return 1;
 
-    int Status = generateInterface(Configuration);
+    const auto Status = generateInterface(Configuration);
 
     formatGeneratedFiles(Configuration);
 
