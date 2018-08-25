@@ -18,7 +18,7 @@ namespace clang
                 llvm::StringRef, bool IsAngled,
                 CharSourceRange FilenameRange, const FileEntry*,
                 llvm::StringRef, llvm::StringRef,
-                const Module*)
+                const Module*, SrcMgr::CharacteristicKind)
         {
             if(!Context.getSourceManager().isWrittenInMainFile(HashLoc))
                 return;

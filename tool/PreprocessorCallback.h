@@ -19,7 +19,7 @@ namespace clang
             void InclusionDirective(SourceLocation HashLoc,
                                     const Token &IncludeTok, llvm::StringRef, bool IsAngled,
                                     CharSourceRange FilenameRange, const FileEntry *,
-                                    llvm::StringRef, llvm::StringRef, const Module *) override;
+                                    llvm::StringRef, llvm::StringRef, const Module *, SrcMgr::CharacteristicKind) override;
 
         private:
             /// \brief Get the raw source string of the range.
