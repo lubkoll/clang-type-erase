@@ -209,7 +209,7 @@ bool copyFile(const boost::filesystem::path& OriginalFile,
     } catch (std::exception& e) {
         success = false;
         llvm::outs() << e.what() << '\n';
-        llvm::outs() << " === Cannot copy from '" << OriginalFile << "' to '" << TargetDir << "/" << FileName << "'.\n";
+        llvm::outs() << " === Cannot copy from '" << OriginalFile.c_str() << "' to '" << TargetDir << "/" << FileName << "'.\n";
     }
     return success;
 }
