@@ -43,9 +43,9 @@ prepare_test_case sbo_cow SBO_COW
 
 # vtable-based type-erased interfaces
 prepare_vtable_test_case vtable_basic VTableBasic
-prepare_vtable_test_case vtable_cow VTableCOW --cow
+prepare_vtable_test_case vtable_cow VTableCOW
 prepare_vtable_test_case vtable_sbo VTableSBO --sbo
-prepare_vtable_test_case vtable_sbo_cow VTableSBOCOW --sbo --cow
+prepare_vtable_test_case vtable_sbo_cow VTableSBOCOW --sbo
 cd ..
 
 # run unit tests

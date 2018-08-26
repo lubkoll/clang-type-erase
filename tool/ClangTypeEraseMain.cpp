@@ -17,7 +17,7 @@ using namespace llvm;
 
 // Apply a custom category to all command-line options so that they are the
 // only ones displayed.
-static llvm::cl::OptionCategory ClangTypeEraseCategory("clang-type-erase options");
+static cl::OptionCategory ClangTypeEraseCategory("clang-type-erase options");
 
 static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 
@@ -221,7 +221,9 @@ bool copyFile(const std::string& TargetDir,
                               boost::filesystem::path("etc")/
                               boost::filesystem::path(FileName.c_str());
     const auto CreateTargetDir = "mkdir -p " + TargetDir;
-    std::system(CreateTargetDir.c_str());
+    const auto CreateDirFailed = std::system(CreateTargetDir.c_str());
+    if(CreateDirFailed)
+        return false;
     return copyFile(OriginalFile, TargetDir, FileName);
 }
 
@@ -241,14 +243,23 @@ int generateInterface(const type_erasure::Config& Configuration)
 
 void formatGeneratedFiles(const type_erasure::Config& Configuration)
 {
-    llvm::outs() << " === Formatting generated files\n";
-    auto Command = Configuration.FormattingCommand + " " + getTableFile(Configuration).c_str();
-    std::system(Command.c_str());
+    if(Configuration.FormattingCommand.empty())
+        return;
 
-    const auto TargetFile = boost::filesystem::path(Configuration.TargetDir) /=
+    llvm::outs() << " === Formatting generated files\n";
+    const auto TableFileName = getTableFile(Configuration);
+    auto Command = Configuration.FormattingCommand + " " + TableFileName.c_str();
+    auto FormattingFailed = std::system(Command.c_str());
+    if(FormattingFailed)
+        llvm::outs() << " === Formatting of " << TableFileName.c_str() << " failed.\n";
+
+    const auto TargetFileName =
+            boost::filesystem::path(Configuration.TargetDir) /=
             boost::filesystem::path(Configuration.SourceFile).filename();
-    Command = Configuration.FormattingCommand + " " + TargetFile.c_str();
-    std::system(Command.c_str());
+    Command = Configuration.FormattingCommand + " " + TargetFileName.c_str();
+    FormattingFailed = std::system(Command.c_str());
+    if(FormattingFailed)
+        llvm::outs() << " === Formatting of " << TargetFileName.c_str() << " failed.\n";
 }
 
 int main(int Argc, const char **Argv)
