@@ -130,7 +130,6 @@ namespace clang
         {
             PP.addPPCallbacks(std::make_unique<PreprocessorCallback>(TableFile, Context, PP));
 
-            llvm::outs() << "Table generator\n";
             utils::writeNoOverwriteWarning(TableFile, Configuration);
             TableFile << "#pragma once\n\n"
                         << "#include " << Configuration.UtilInclude << '\n'

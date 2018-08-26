@@ -402,7 +402,6 @@ namespace clang
             if(std::distance(Declaration->method_begin(), Declaration->method_end()) == 0)
                 return true;
 
-            llvm::outs() << "CUSTOM FUNCTION TABLE: " << Configuration.CustomFunctionTable << "\n";
             return Configuration.CustomFunctionTable
                     ? VisitCustomCXXRecordDecl(Declaration)
                     : VisitSimpleCXXRecordDecl(Declaration);
