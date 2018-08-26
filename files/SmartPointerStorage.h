@@ -12,6 +12,12 @@ namespace clang
     {
         namespace polymorphic
         {
+            inline const char* charPtr( const void* ptr ) noexcept
+            {
+                assert(ptr);
+                return static_cast<const char*>( ptr );
+            }
+
             template < class Buffer >
             bool isHeapAllocated (void* data, const Buffer& buffer) noexcept
             {
@@ -19,7 +25,7 @@ namespace clang
                 if(!data)
                     return true;
                 return data < static_cast<const void*>(&buffer) ||
-                        static_cast<const void*>( static_cast<const char*>(&buffer) + sizeof(buffer) ) <= data;
+                        static_cast<const void*>( charPtr(&buffer) + sizeof(buffer) ) <= data;
             }
 
             template <class Storage, class Interface, class Derived, bool = std::is_base_of<Interface,Derived>::value>
