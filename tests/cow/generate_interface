@@ -8,7 +8,7 @@ DETAIL_DIR=.
 INCLUDE_DIR=../../
 
 COMMAND=$3
-COMMON_ARGS="-detail-dir=$DETAIL_DIR -include-dir=$INCLUDE_DIR -util-dir=$UTIL_DIR -util-include-dir=<$UTIL_DIR/type_erasure_util.h> -storage-include-dir=<$UTIL_DIR/SmartPointerStorage.h> -cow"
+COMMON_ARGS="-detail-dir=$DETAIL_DIR -include-dir=$INCLUDE_DIR -util-dir=$UTIL_DIR -util-include-dir=<$UTIL_DIR/TypeErasureUtil.h> -storage-include-dir=<$UTIL_DIR/SmartPointerStorage.h> -cow"
 
 function generate_interface {
 echo "generate $1"

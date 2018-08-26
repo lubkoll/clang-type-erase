@@ -19,10 +19,9 @@ namespace clang
             boost::filesystem::path getDetailFile(const Config& Configuration, const std::string& Detail)
             {
                 const auto FileName = boost::filesystem::path(Configuration.SourceFile).filename();
-                const auto Replacement = "_" + Detail + ".h";
                 std::string Name = FileName.c_str();
                 Name = Name.substr(0, Name.size() - std::string(FileName.extension().c_str()).size());
-                Name += Replacement;
+                Name += "_" + Detail + ".h";
                 return boost::filesystem::path(Configuration.DetailDir) /=
                        boost::filesystem::path(Name);
             }
@@ -138,28 +137,6 @@ namespace clang
             TypeErasureGenerator Visitor;
         };
 
-        class SimpleTypeErasureConsumer : public ASTConsumer
-        {
-        public:
-            explicit SimpleTypeErasureConsumer(ASTContext& Context,
-                                         Preprocessor& PP,
-                                         const Config& Configuration)
-                : Visitor(getInterfaceFile(Configuration).c_str(),
-                          Context,
-                          PP,
-                          Configuration,
-                          {})
-            {}
-
-            void HandleTranslationUnit(ASTContext &Context) override
-            {
-                Visitor.TraverseDecl(Context.getTranslationUnitDecl());
-            }
-
-        private:
-            SimpleInterfaceGenerator Visitor;
-        };
-
 
         class TypeErasureAction : public SyntaxOnlyAction
         {
@@ -170,13 +147,9 @@ namespace clang
 
             std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance& Compiler, llvm::StringRef) override
             {
-//                if(Configuration.CustomFunctionTable)
-                    return std::unique_ptr<ASTConsumer>(new TypeErasureConsumer(Compiler.getASTContext(),
-                                                                                Compiler.getPreprocessor(),
-                                                                                Configuration));
-//                return std::unique_ptr<ASTConsumer>(new SimpleTypeErasureConsumer(Compiler.getASTContext(),
-//                                                                            Compiler.getPreprocessor(),
-//                                                                            Configuration));
+                return std::unique_ptr<ASTConsumer>(new TypeErasureConsumer(Compiler.getASTContext(),
+                                                                            Compiler.getPreprocessor(),
+                                                                            Configuration));
             }
 
         private:

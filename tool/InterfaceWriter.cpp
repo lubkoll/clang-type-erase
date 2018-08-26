@@ -387,7 +387,7 @@ namespace clang
                 return true;
 
             utils::handleClosingNamespaces(InterfaceFileStream, *Declaration, OpenNamespaces);
-            if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+            if(const auto Comment = Context.getCommentForDecl(Declaration, &PP))
                 copyComment(InterfaceFileStream, *Comment, Context.getSourceManager());
             InterfaceFileStream << "namespace " << Declaration->getNameAsString() << " {\n";
             OpenNamespaces.push(Declaration->getNameAsString());
@@ -423,9 +423,9 @@ namespace clang
                     Declaration->getInit()->dump(StrStream);
                     StrStream.str();
 
-                    const auto RInitEnd = std::find_if(Init.rbegin(), Init.rend(),
+                    const auto InitREnd = std::find_if(Init.rbegin(), Init.rend(),
                                                        [](auto C) { return C=='\''; });
-                    Initializer = std::accumulate(Init.rbegin(), RInitEnd,
+                    Initializer = std::accumulate(Init.rbegin(), InitREnd,
                                                   std::string(" = "),
                                                   [this](std::string Str, auto C)
                     { return (C=='\n' || C == '\r' || C == '\t') ? Str : Str + C; });
@@ -448,7 +448,7 @@ namespace clang
 
             if(isMember(CurrentClass, *Declaration))
             {
-                if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+                if(const auto Comment = Context.getCommentForDecl(Declaration, &PP))
                 {
                     std::stringstream CommentStream;
                     copyComment(CommentStream, *Comment, Context.getSourceManager());
@@ -460,7 +460,7 @@ namespace clang
             }
             else
             {
-                if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+                if(const auto Comment = Context.getCommentForDecl(Declaration, &PP))
                     copyComment(InterfaceFileStream, *Comment, Context.getSourceManager());
                 copy(InterfaceFileStream, *Declaration, Context.getSourceManager());
             }
@@ -474,7 +474,7 @@ namespace clang
 
             if(isMember(CurrentClass, *Declaration))
             {
-                if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+                if(const auto Comment = Context.getCommentForDecl(Declaration, &PP))
                 {
                     std::stringstream CommentStream;
                     copyComment(CommentStream, *Comment, Context.getSourceManager());
@@ -486,7 +486,7 @@ namespace clang
             }
             else
             {
-                if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+                if(const auto Comment = Context.getCommentForDecl(Declaration, &PP))
                     copyComment(InterfaceFileStream, *Comment, Context.getSourceManager());
                 copy(InterfaceFileStream, *Declaration, Context.getSourceManager());
             }
@@ -500,7 +500,7 @@ namespace clang
                     Declaration->getTemplatedKind() != FunctionDecl::TK_NonTemplate)
                 return true;
 
-            if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+            if(const auto Comment = Context.getCommentForDecl(Declaration, &PP))
                 copyComment(InterfaceFileStream, *Comment, Context.getSourceManager());
             copy(InterfaceFileStream, *Declaration, Context.getSourceManager());
             return true;
@@ -512,7 +512,7 @@ namespace clang
                     dynamic_cast<CXXMethodDecl*>(Declaration) != nullptr)
                 return true;
 
-            if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+            if(const auto Comment = Context.getCommentForDecl(Declaration, &PP))
                 copyComment(InterfaceFileStream, *Comment, Context.getSourceManager());
             copy(InterfaceFileStream, *Declaration, Context.getSourceManager());
             return true;
@@ -529,7 +529,7 @@ namespace clang
             CurrentClass = ClassName;
 
             std::stringstream ClassStream;
-            if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+            if(const auto Comment = Context.getCommentForDecl(Declaration, &PP))
                 copyComment(ClassStream, *Comment, Context.getSourceManager());
             ClassStream << "class " << ClassName << "\n"
                         << "{\n"
@@ -545,7 +545,7 @@ namespace clang
             {
                 if(!Method->isUserProvided())
                     return;
-                if(auto Comment = Context.getCommentForDecl(Method, &PP))
+                if(const auto Comment = Context.getCommentForDecl(Method, &PP))
                     copyComment(ClassStream, *Comment, Context.getSourceManager());
 
                 FunctionNames.emplace_back(utils::getFunctionName(*Method));
@@ -605,7 +605,7 @@ namespace clang
             std::stringstream ClassStream;
             std::stringstream BaseImplStream;
             std::stringstream ForwardingStream;
-            if(auto Comment = Context.getCommentForDecl(Declaration, &PP))
+            if(const auto Comment = Context.getCommentForDecl(Declaration, &PP))
                 copyComment(ClassStream, *Comment, Context.getSourceManager());
             ClassStream << "class " << ClassName << "\n"
                         << "{\n";
@@ -631,7 +631,7 @@ namespace clang
             {
                 if(!Method->isUserProvided())
                     return;
-                if(auto Comment = Context.getCommentForDecl(Method, &PP))
+                if(const auto Comment = Context.getCommentForDecl(Method, &PP))
                     copyComment(ForwardingStream, *Comment, Context.getSourceManager());
 
                 const auto ReturnType = Method->getReturnType().getAsString(printingPolicy());

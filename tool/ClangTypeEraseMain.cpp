@@ -122,7 +122,7 @@ std::string makeAbsolute(const std::string& PathStr)
 {
     if(PathStr.empty())
         return PathStr;
-    boost::filesystem::path Path(PathStr);
+    const boost::filesystem::path Path(PathStr);
     if(!Path.is_absolute())
         return (boost::filesystem::current_path() /= Path).c_str();
 
@@ -280,14 +280,14 @@ int main(int Argc, const char **Argv)
     if( equivalent(boost::filesystem::path(Configuration.TargetDir),
                    boost::filesystem::path(Configuration.SourceFile).remove_filename()) )
     {
-        llvm::outs() << "In-place generation of interfaces is not yet supported.\n";
+        llvm::outs() << " === In-place generation of interfaces is not yet supported.\n";
         return 1;
     }
 
     if(Configuration.CustomFunctionTable)
     {
         const auto SuccessfulCopy =
-                copyFile(Configuration.UtilDir, "type_erasure_util.h") &&
+                copyFile(Configuration.UtilDir, "TypeErasureUtil.h") &&
         copyFile(Configuration.UtilDir, "Storage.h");
         if(!SuccessfulCopy)
             return 1;
