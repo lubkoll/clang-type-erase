@@ -6,7 +6,6 @@
 #include "clang/Lex/Preprocessor.h"
 
 #include "PreprocessorCallback.h"
-#include "SimpleInterfaceWriter.h"
 
 #include <numeric>
 
