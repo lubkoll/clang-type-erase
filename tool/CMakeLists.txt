@@ -6,28 +6,30 @@ set(CMAKE_BUILD_TYPE Release)
 
 add_clang_executable(clang-type-erase
   ClangTypeEraseMain.cpp
+  Config.h
+  Config.cpp
+  TableWriter.h
   TableWriter.cpp
+  InterfaceWriter.h
   InterfaceWriter.cpp
+  TypeErasureWriter.h
   TypeErasureWriter.cpp
+  PreprocessorCallback.h
   PreprocessorCallback.cpp
+  Utils.h
   Utils.cpp
-  )
+)
 add_dependencies(clang-type-erase
   clang-headers
-  )
-
-include_directories(/home/lars/Libraries/build-boost-clang/include)
-link_directories(/home/lars/Libraries/build-boost-clang/lib)
+)
 
 target_link_libraries(clang-type-erase PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
-  clangTypeEraseUtils
   clangTooling
   boost_filesystem
   boost_system
-  )
+)
 
-install(TARGETS clang-type-erase
-  RUNTIME DESTINATION bin)
+install(TARGETS clang-type-erase RUNTIME DESTINATION bin)
