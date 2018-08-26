@@ -150,7 +150,7 @@ namespace clang
 
         bool TableGenerator::VisitNamespaceDecl(NamespaceDecl* Declaration)
         {
-            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getLocStart()))
+            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getBeginLoc()))
                 return true;
             utils::handleClosingNamespaces(TableFile, *Declaration, OpenNamespaces);
             TableFile << "namespace " << Declaration->getNameAsString() << " {\n";
@@ -160,7 +160,7 @@ namespace clang
 
         bool TableGenerator::VisitCXXRecordDecl(CXXRecordDecl* Declaration)
         {
-            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getLocStart()))
+            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getBeginLoc()))
                 return true;
             utils::handleClosingNamespaces(TableFile, *Declaration, OpenNamespaces);
             if(std::distance(Declaration->method_begin(), Declaration->method_end()) == 0)

@@ -357,7 +357,7 @@ namespace clang
 
         bool SimpleInterfaceGenerator::VisitNamespaceDecl(NamespaceDecl* Declaration)
         {
-            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getLocStart()))
+            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getBeginLoc()))
                 return true;
 
             utils::handleClosingNamespaces(InterfaceFileStream, *Declaration, OpenNamespaces);
@@ -370,7 +370,7 @@ namespace clang
 
         bool SimpleInterfaceGenerator::VisitCXXRecordDecl(CXXRecordDecl* Declaration)
         {
-            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getLocStart()))
+            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getBeginLoc()))
                 return true;
             utils::handleClosingNamespaces(InterfaceFileStream, *Declaration, OpenNamespaces);
             if(std::distance(Declaration->method_begin(), Declaration->method_end()) == 0)
@@ -472,7 +472,7 @@ namespace clang
 
         bool SimpleInterfaceGenerator::VisitVarDecl(VarDecl* Declaration)
         {
-            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getLocStart()) ||
+            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getBeginLoc()) ||
                     dynamic_cast<ParmVarDecl*>(Declaration) != nullptr)
                 return true;
 
@@ -506,7 +506,7 @@ namespace clang
 
         bool SimpleInterfaceGenerator::VisitTypedefDecl(TypedefDecl* Declaration)
         {
-            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getLocStart()))
+            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getBeginLoc()))
                 return true;
 
             if(isMember(CurrentClass, *Declaration))
@@ -532,7 +532,7 @@ namespace clang
 
         bool SimpleInterfaceGenerator::VisitTypeAliasDecl(TypeAliasDecl* Declaration)
         {
-            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getLocStart()))
+            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getBeginLoc()))
                 return true;
 
             if(isMember(CurrentClass, *Declaration))
@@ -558,7 +558,7 @@ namespace clang
 
         bool SimpleInterfaceGenerator::VisitFunctionDecl(FunctionDecl* Declaration)
         {
-            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getLocStart()) ||
+            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getBeginLoc()) ||
                     dynamic_cast<CXXMethodDecl*>(Declaration) != nullptr ||
                     Declaration->getTemplatedKind() != FunctionDecl::TK_NonTemplate)
                 return true;
@@ -571,7 +571,7 @@ namespace clang
 
         bool SimpleInterfaceGenerator::VisitFunctionTemplateDecl(FunctionTemplateDecl* Declaration)
         {
-            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getLocStart()) ||
+            if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getBeginLoc()) ||
                     dynamic_cast<CXXMethodDecl*>(Declaration) != nullptr)
                 return true;
 
