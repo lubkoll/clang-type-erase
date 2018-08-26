@@ -4,7 +4,6 @@
 #include <cassert>
 #include <memory>
 #include <type_traits>
-#include <iostream>
 
 namespace clang
 {
@@ -12,39 +11,33 @@ namespace clang
     {
         namespace polymorphic
         {
-            inline const char* char_ptr( const void* ptr ) noexcept
-            {
-                assert(ptr);
-                return static_cast<const char*>( ptr );
-            }
-
             template < class Buffer >
-            bool is_heap_allocated (void* data, const Buffer& buffer) noexcept
+            bool isHeapAllocated (void* data, const Buffer& buffer) noexcept
             {
                 // treat nullptr as heap-allocated
                 if(!data)
                     return true;
                 return data < static_cast<const void*>(&buffer) ||
-                        static_cast<const void*>( char_ptr(&buffer) + sizeof(buffer) ) <= data;
+                        static_cast<const void*>( static_cast<const char*>(&buffer) + sizeof(buffer) ) <= data;
             }
 
             template <class Storage, class Interface, class Derived, bool = std::is_base_of<Interface,Derived>::value>
             struct Cast
             {
-                static Derived* target(bool contains_reference_wrapper, Storage* storage) noexcept
+                static Derived* target(bool containsReferenceWrapper, Storage* storage) noexcept
                 {
-                    auto data = storage->get_interface_ptr( );
+                    auto data = storage->getInterfacePtr( );
                     assert(data);
-                    if(contains_reference_wrapper)
+                    if(containsReferenceWrapper)
                         return &dynamic_cast<std::reference_wrapper<Derived>*>(data)->get();
                     return dynamic_cast<Derived*>(data);
                 }
 
-                static const Derived* target(bool contains_reference_wrapper, const Storage* storage) noexcept
+                static const Derived* target(bool containsReferenceWrapper, const Storage* storage) noexcept
                 {
-                    auto data = storage->get_interface_ptr( );
+                    auto data = storage->getInterfacePtr( );
                     assert(data);
-                    if(contains_reference_wrapper)
+                    if(containsReferenceWrapper)
                         return &dynamic_cast<const std::reference_wrapper<Derived>*>(data)->get();
                     return dynamic_cast<const Derived*>(data);
                 }
@@ -69,25 +62,25 @@ namespace clang
             {
             public:
                 constexpr explicit Accessor(bool contains_ref_wrapper = false) noexcept
-                    : contains_reference_wrapper(contains_ref_wrapper)
+                    : containsReferenceWrapper(contains_ref_wrapper)
                 {}
 
                 Interface* operator->()
                 {
-                    return static_cast<Storage*>(this)->get_interface_ptr( );
+                    return static_cast<Storage*>(this)->getInterfacePtr( );
                 }
 
                 const Interface* operator->() const
                 {
-                    return static_cast<const Storage*>(this)->get_interface_ptr( );
+                    return static_cast<const Storage*>(this)->getInterfacePtr( );
                 }
 
                 template <class T>
                 T& get() noexcept
                 {
-                    auto data = static_cast<Storage*>(this)->get_interface_ptr( );
+                    auto data = static_cast<Storage*>(this)->getInterfacePtr( );
                     assert(data);
-                    if(contains_reference_wrapper)
+                    if(containsReferenceWrapper)
                         return static_cast<std::reference_wrapper<T>*>(data)->get();
                     return *static_cast<T*>(data);
                 }
@@ -95,9 +88,9 @@ namespace clang
                 template <class T>
                 const T& get() const noexcept
                 {
-                    const auto data = static_cast<const Storage*>(this)->get_interface_ptr( );
+                    const auto data = static_cast<const Storage*>(this)->getInterfacePtr( );
                     assert(data);
-                    if(contains_reference_wrapper)
+                    if(containsReferenceWrapper)
                         return static_cast<const std::reference_wrapper<T>*>(data)->get();
                     return *static_cast<const T*>(data);
                 }
@@ -106,7 +99,7 @@ namespace clang
                 T* target() noexcept
                 {
                     auto interface = static_cast<const Storage*>(this)->interface_.get();
-                    if(contains_reference_wrapper)
+                    if(containsReferenceWrapper)
                     {
                         auto wrappedResult = dynamic_cast<Wrapper<std::reference_wrapper<T>>*>(interface);
                         return wrappedResult ? &wrappedResult->impl : nullptr;
@@ -119,7 +112,7 @@ namespace clang
                 const T* target() const noexcept
                 {
                     auto interface = static_cast<const Storage*>(this)->interface_.get();
-                    if(contains_reference_wrapper)
+                    if(containsReferenceWrapper)
                     {
                         auto wrappedResult = dynamic_cast<const Wrapper<std::reference_wrapper<T>>*>(interface);
                         return wrappedResult ? &wrappedResult->impl : nullptr;
@@ -130,11 +123,11 @@ namespace clang
 
                 explicit operator bool() const noexcept
                 {
-                    return static_cast<const Storage*>(this)->get_interface_ptr( ) != nullptr;
+                    return static_cast<const Storage*>(this)->getInterfacePtr( ) != nullptr;
                 }
 
             private:
-                bool contains_reference_wrapper = false;
+                bool containsReferenceWrapper = false;
             };
 
             template <class Interface, template <class> class Wrapper>
@@ -145,7 +138,7 @@ namespace clang
                 template <class T,
                           std::enable_if_t<!std::is_base_of<Storage, std::decay_t<T> >::value>* = nullptr,
                           std::enable_if_t<std::is_base_of<Interface, Wrapper<T>>::value>* = nullptr>
-                Storage(T&& t)
+                explicit Storage(T&& t)
                     : interface_(std::make_unique<Wrapper<T>>(std::forward<T>(t)))
                 {}
 
@@ -165,12 +158,12 @@ namespace clang
             private:
                 friend class Accessor<Storage, Interface, Wrapper>;
 
-                Interface* get_interface_ptr()
+                Interface* getInterfacePtr()
                 {
                     return interface_.get();
                 }
 
-                const Interface* get_interface_ptr() const
+                const Interface* getInterfacePtr() const
                 {
                     return interface_.get();
                 }
@@ -186,19 +179,19 @@ namespace clang
                 template <class T,
                           std::enable_if_t<!std::is_base_of<COWStorage, std::decay_t<T> >::value>* = nullptr,
                           std::enable_if_t<std::is_base_of<Interface, Wrapper<T>>::value>* = nullptr>
-                COWStorage(T&& t)
+                explicit COWStorage(T&& t)
                     : interface_(std::make_shared<Wrapper<T>>(std::forward<T>(t)))
                 {}
 
             private:
-                Interface* get_interface_ptr()
+                Interface* getInterfacePtr()
                 {
                     if(!interface_.unique())
                         interface_ = interface_->clone();
                     return interface_.get();
                 }
 
-                const Interface* get_interface_ptr() const
+                const Interface* getInterfacePtr() const
                 {
                     return interface_.get();
                 }
@@ -221,49 +214,54 @@ namespace clang
 
                 template <class T,
                           std::enable_if_t<!std::is_base_of<SBOStorage, std::decay_t<T> >::value>* = nullptr,
-                          std::enable_if_t<std::is_base_of<Interface, Wrapper<T>>::value>* = nullptr>
-                SBOStorage(T&& t)
+                          std::enable_if_t<std::is_base_of<Interface, Wrapper<T>>::value>* = nullptr,
+                          std::enable_if_t<sizeof(Wrapper<std::decay_t<T>>) > Size>* = nullptr>
+                explicit SBOStorage(T&& t)
+                    : interface_(std::make_shared<Wrapper<std::decay_t<T>>>(std::forward<T>(t)))
                 {
-                    using DecT = std::decay_t<T>;
-                    if(sizeof(Wrapper<DecT>) > Size) {
-                        interface_ = std::make_shared<Wrapper<DecT>>(std::forward<T>(t));
-                    } else {
-                        new(&buffer_) Wrapper<DecT>(std::forward<T>(t));
-                        interface_ = make_alias();
-                    }
+                }
+
+                template <class T,
+                          std::enable_if_t<!std::is_base_of<SBOStorage, std::decay_t<T> >::value>* = nullptr,
+                          std::enable_if_t<std::is_base_of<Interface, Wrapper<T>>::value>* = nullptr,
+                          std::enable_if_t<sizeof(Wrapper<std::decay_t<T>>) <= Size>* = nullptr>
+                explicit SBOStorage(T&& t)
+                {
+                    new(&buffer_) Wrapper<std::decay_t<T>>(std::forward<T>(t));
+                    interface_ = makeAlias();
                 }
 
                 SBOStorage(const SBOStorage& other)
                 {
                     if(!other.interface_)
                         return;
-                    if(is_heap_allocated(other.interface_.get(), other.buffer_)) {
+                    if(isHeapAllocated(other.interface_.get(), other.buffer_)) {
                         interface_ = other.interface_->clone();
                     } else {
                         buffer_ = other.buffer_;
-                        interface_ = make_alias();
+                        interface_ = makeAlias();
                     }
                 }
 
                 SBOStorage& operator=(const SBOStorage& other)
                 {
                     reset();
-                    if(is_heap_allocated(other.interface_.get(), other.buffer_)) {
+                    if(isHeapAllocated(other.interface_.get(), other.buffer_)) {
                         interface_ = other.interface_ ? other.interface_->clone() : nullptr;
                     } else {
                         buffer_ = other.buffer_;
-                        interface_ = make_alias();
+                        interface_ = makeAlias();
                     }
                     return *this;
                 }
 
                 SBOStorage(SBOStorage&& other)
                 {
-                    if(is_heap_allocated(other.interface_.get(), other.buffer_)) {
+                    if(isHeapAllocated(other.interface_.get(), other.buffer_)) {
                         interface_ = std::move(other.interface_);
                     } else {
                         buffer_ = other.buffer_;
-                        interface_ = make_alias();
+                        interface_ = makeAlias();
                     }
                     other.interface_ = nullptr;
                 }
@@ -271,11 +269,11 @@ namespace clang
                 SBOStorage& operator=(SBOStorage&& other)
                 {
                     reset();
-                    if(is_heap_allocated(other.interface_.get(), other.buffer_)) {
+                    if(isHeapAllocated(other.interface_.get(), other.buffer_)) {
                         interface_ = std::move(other.interface_);
                     } else {
                         buffer_ = other.buffer_;
-                        interface_ = make_alias();
+                        interface_ = makeAlias();
                     }
                     other.interface_ = nullptr;
                     return *this;
@@ -284,23 +282,23 @@ namespace clang
             private:
                 friend class Accessor<SBOStorage, Interface, Wrapper>;
 
-                Interface* get_interface_ptr()
+                Interface* getInterfacePtr()
                 {
                     return interface_.get();
                 }
 
-                const Interface* get_interface_ptr() const
+                const Interface* getInterfacePtr() const
                 {
                     return interface_.get();
                 }
 
                 void reset()
                 {
-                    if(!is_heap_allocated(interface_.get(), buffer_))
+                    if(!isHeapAllocated(interface_.get(), buffer_))
                         interface_->~Interface();
                 }
 
-                std::shared_ptr<Interface> make_alias()
+                std::shared_ptr<Interface> makeAlias()
                 {
                     const auto tmp = static_cast<Interface*>(static_cast<void*>(&buffer_[0]));
                     return std::shared_ptr<Interface>(std::shared_ptr<Interface>(), tmp);
@@ -323,47 +321,52 @@ namespace clang
 
                 template <class T,
                           std::enable_if_t<!std::is_base_of<SBOCOWStorage, std::decay_t<T> >::value>* = nullptr,
-                          std::enable_if_t<std::is_base_of<Interface, Wrapper<T>>::value>* = nullptr>
-                SBOCOWStorage(T&& t)
+                          std::enable_if_t<std::is_base_of<Interface, Wrapper<T>>::value>* = nullptr,
+                          std::enable_if_t<sizeof(Wrapper<std::decay_t<T>>) > Size>* = nullptr>
+                explicit SBOCOWStorage(T&& t)
+                    : interface_(std::make_shared<Wrapper<std::decay_t<T>>>(std::forward<T>(t)))
                 {
-                    using DecT = std::decay_t<T>;
-                    if(sizeof(Wrapper<DecT>) > Size) {
-                        interface_ = std::make_shared<Wrapper<DecT>>(std::forward<T>(t));
-                    } else {
-                        new(&buffer_) Wrapper<DecT>(std::forward<T>(t));
-                        interface_ = make_alias();
-                    }
+                }
+
+                template <class T,
+                          std::enable_if_t<!std::is_base_of<SBOCOWStorage, std::decay_t<T> >::value>* = nullptr,
+                          std::enable_if_t<std::is_base_of<Interface, Wrapper<T>>::value>* = nullptr,
+                          std::enable_if_t<sizeof(Wrapper<std::decay_t<T>>) <= Size>* = nullptr>
+                explicit SBOCOWStorage(T&& t)
+                {
+                    new(&buffer_) Wrapper<std::decay_t<T>>(std::forward<T>(t));
+                    interface_ = makeAlias();
                 }
 
                 SBOCOWStorage(const SBOCOWStorage& other)
                 {
-                    if(is_heap_allocated(other.interface_.get(), other.buffer_)) {
+                    if(isHeapAllocated(other.interface_.get(), other.buffer_)) {
                         interface_ = other.interface_;
                     } else {
                         buffer_ = other.buffer_;
-                        interface_ = make_alias();
+                        interface_ = makeAlias();
                     }
                 }
 
                 SBOCOWStorage& operator=(const SBOCOWStorage& other)
                 {
                     reset();
-                    if(is_heap_allocated(other.interface_.get(), other.buffer_)) {
+                    if(isHeapAllocated(other.interface_.get(), other.buffer_)) {
                         interface_ = other.interface_;
                     } else {
                         buffer_ = other.buffer_;
-                        interface_ = make_alias();
+                        interface_ = makeAlias();
                     }
                     return *this;
                 }
 
                 SBOCOWStorage(SBOCOWStorage&& other)
                 {
-                    if(is_heap_allocated(other.interface_.get(), other.buffer_)) {
+                    if(isHeapAllocated(other.interface_.get(), other.buffer_)) {
                         interface_ = std::move(other.interface_);
                     } else {
                         buffer_ = other.buffer_;
-                        interface_ = make_alias();
+                        interface_ = makeAlias();
                     }
                     other.interface_ = nullptr;
                 }
@@ -371,11 +374,11 @@ namespace clang
                 SBOCOWStorage& operator=(SBOCOWStorage&& other)
                 {
                     reset();
-                    if(is_heap_allocated(other.interface_.get(), other.buffer_)) {
+                    if(isHeapAllocated(other.interface_.get(), other.buffer_)) {
                         interface_ = std::move(other.interface_);
                     } else {
                         buffer_ = other.buffer_;
-                        interface_ = make_alias();
+                        interface_ = makeAlias();
                     }
                     other.interface_ = nullptr;
                     return *this;
@@ -384,25 +387,25 @@ namespace clang
             private:
                 friend class Accessor<SBOCOWStorage, Interface, Wrapper>;
 
-                Interface* get_interface_ptr()
+                Interface* getInterfacePtr()
                 {
-                    if(is_heap_allocated(interface_.get(), buffer_) && !interface_.unique())
+                    if(isHeapAllocated(interface_.get(), buffer_) && !interface_.unique())
                         interface_ = interface_->clone();
                     return interface_.get();
                 }
 
-                const Interface* get_interface_ptr() const
+                const Interface* getInterfacePtr() const
                 {
                     return interface_.get();
                 }
 
                 void reset()
                 {
-                    if(!is_heap_allocated(interface_.get(), buffer_))
+                    if(!isHeapAllocated(interface_.get(), buffer_))
                         interface_->~Interface();
                 }
 
-                std::shared_ptr<Interface> make_alias()
+                std::shared_ptr<Interface> makeAlias()
                 {
                     const auto tmp = static_cast<Interface*>(static_cast<void*>(&buffer_[0]));
                     return std::shared_ptr<Interface>(std::shared_ptr<Interface>(), tmp);
