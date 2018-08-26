@@ -247,17 +247,20 @@ void formatGeneratedFiles(const type_erasure::Config& Configuration)
         return;
 
     llvm::outs() << " === Formatting generated files\n";
-    const auto TableFileName = getTableFile(Configuration);
-    auto Command = Configuration.FormattingCommand + " " + TableFileName.c_str();
-    auto FormattingFailed = std::system(Command.c_str());
-    if(FormattingFailed)
-        llvm::outs() << " === Formatting of " << TableFileName.c_str() << " failed.\n";
+    if(Configuration.CustomFunctionTable)
+    {
+        const auto TableFileName = getTableFile(Configuration);
+        const auto Command = Configuration.FormattingCommand + " " + TableFileName.c_str();
+        const auto FormattingFailed = std::system(Command.c_str());
+        if(FormattingFailed)
+            llvm::outs() << " === Formatting of " << TableFileName.c_str() << " failed.\n";
+    }
 
     const auto TargetFileName =
             boost::filesystem::path(Configuration.TargetDir) /=
             boost::filesystem::path(Configuration.SourceFile).filename();
-    Command = Configuration.FormattingCommand + " " + TargetFileName.c_str();
-    FormattingFailed = std::system(Command.c_str());
+    const auto Command = Configuration.FormattingCommand + " " + TargetFileName.c_str();
+    const auto FormattingFailed = std::system(Command.c_str());
     if(FormattingFailed)
         llvm::outs() << " === Formatting of " << TargetFileName.c_str() << " failed.\n";
 }
