@@ -204,8 +204,8 @@ bool copyFile(const boost::filesystem::path& OriginalFile,
     auto success = true;
     llvm::outs() << " === Copying '" << OriginalFile.c_str() << "' to '" << TargetDir << "'\n";
     try {
-        boost::filesystem::copy(OriginalFile,
-                                boost::filesystem::path(TargetDir) /= boost::filesystem::path(FileName));
+        copy(OriginalFile,
+             boost::filesystem::path(TargetDir) /= boost::filesystem::path(FileName));
     } catch (std::exception& e) {
         success = false;
         llvm::outs() << e.what() << '\n';
@@ -235,7 +235,8 @@ int generateInterface(const type_erasure::Config& Configuration)
     using namespace std::chrono;
     llvm::outs() << " ===\n === Generating type-erased interface '" << Configuration.SourceFile << "'\n";
     const auto StartTime = steady_clock::now();
-    const auto Status = Tool.run(std::make_unique<type_erasure::TypeErasureActionFactory>(Configuration).get());
+    auto factory = type_erasure::TypeErasureActionFactory(Configuration);
+    const auto Status = Tool.run(&factory);
     llvm::outs() << " === Elapsed time: " << duration_cast<milliseconds>(steady_clock::now() - StartTime).count() << "ms\n"
                  << " ===\n";
     return Status;
@@ -276,8 +277,8 @@ int main(int Argc, const char **Argv)
                  << " === File: " << Configuration.SourceFile << '\n'
                  << " === Target directory: " << Configuration.TargetDir << '\n'
                  << " ===\n";
-    if( boost::filesystem::equivalent(boost::filesystem::path(Configuration.TargetDir),
-                                      boost::filesystem::path(Configuration.SourceFile).remove_filename()) )
+    if( equivalent(boost::filesystem::path(Configuration.TargetDir),
+                   boost::filesystem::path(Configuration.SourceFile).remove_filename()) )
     {
         llvm::outs() << "In-place generation of interfaces is not yet supported.\n";
         return 1;
