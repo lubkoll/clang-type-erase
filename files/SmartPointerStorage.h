@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cassert>
+#include <functional>
 #include <memory>
 #include <type_traits>
 
@@ -215,7 +216,7 @@ namespace clang
                 template <class T,
                           std::enable_if_t<!std::is_base_of<SBOStorage, std::decay_t<T> >::value>* = nullptr,
                           std::enable_if_t<std::is_base_of<Interface, Wrapper<T>>::value>* = nullptr,
-                          std::enable_if_t<sizeof(Wrapper<std::decay_t<T>>) > Size>* = nullptr>
+                          std::enable_if_t<std::greater<>()(sizeof(Wrapper<std::decay_t<T>>), Size)>* = nullptr>
                 explicit SBOStorage(T&& t)
                     : interface_(std::make_shared<Wrapper<std::decay_t<T>>>(std::forward<T>(t)))
                 {
@@ -224,7 +225,7 @@ namespace clang
                 template <class T,
                           std::enable_if_t<!std::is_base_of<SBOStorage, std::decay_t<T> >::value>* = nullptr,
                           std::enable_if_t<std::is_base_of<Interface, Wrapper<T>>::value>* = nullptr,
-                          std::enable_if_t<sizeof(Wrapper<std::decay_t<T>>) <= Size>* = nullptr>
+                          std::enable_if_t<std::less_equal<>()(sizeof(Wrapper<std::decay_t<T>>), Size)>* = nullptr>
                 explicit SBOStorage(T&& t)
                 {
                     new(&buffer_) Wrapper<std::decay_t<T>>(std::forward<T>(t));
@@ -322,7 +323,7 @@ namespace clang
                 template <class T,
                           std::enable_if_t<!std::is_base_of<SBOCOWStorage, std::decay_t<T> >::value>* = nullptr,
                           std::enable_if_t<std::is_base_of<Interface, Wrapper<T>>::value>* = nullptr,
-                          std::enable_if_t<sizeof(Wrapper<std::decay_t<T>>) > Size>* = nullptr>
+                          std::enable_if_t<std::greater<>()(sizeof(Wrapper<std::decay_t<T>>), Size)>* = nullptr>
                 explicit SBOCOWStorage(T&& t)
                     : interface_(std::make_shared<Wrapper<std::decay_t<T>>>(std::forward<T>(t)))
                 {
@@ -331,7 +332,7 @@ namespace clang
                 template <class T,
                           std::enable_if_t<!std::is_base_of<SBOCOWStorage, std::decay_t<T> >::value>* = nullptr,
                           std::enable_if_t<std::is_base_of<Interface, Wrapper<T>>::value>* = nullptr,
-                          std::enable_if_t<sizeof(Wrapper<std::decay_t<T>>) <= Size>* = nullptr>
+                          std::enable_if_t<std::less_equal<>()(sizeof(Wrapper<std::decay_t<T>>), Size)>* = nullptr>
                 explicit SBOCOWStorage(T&& t)
                 {
                     new(&buffer_) Wrapper<std::decay_t<T>>(std::forward<T>(t));
