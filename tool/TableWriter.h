@@ -2,7 +2,8 @@
 
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Lex/Preprocessor.h"
-#include "../utils/Config.h"
+
+#include "Config.h"
 
 #include <fstream>
 #include <stack>

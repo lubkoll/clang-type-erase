@@ -2,8 +2,8 @@
 
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Tooling/Tooling.h"
-#include "../utils/Config.h"
 
+#include "Config.h"
 #include "TableWriter.h"
 #include "InterfaceWriter.h"
 
