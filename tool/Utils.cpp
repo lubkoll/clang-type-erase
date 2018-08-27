@@ -1,6 +1,6 @@
 #include "Utils.h"
 
-#include "../utils/Config.h"
+#include "Config.h"
 
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/PrettyPrinter.h"
