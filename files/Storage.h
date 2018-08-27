@@ -95,14 +95,75 @@ namespace clang
         }
 
 
-        template <class Derived>
-        class Accessor
+        template <class Derived, bool rttiEnabled = true>
+        class Casts
         {
         public:
-            constexpr explicit Accessor(std::size_t tile_id = 0,
-                                        bool contains_ref_wrapper = false) noexcept
-                : containsReferenceWrapper(contains_ref_wrapper),
-                  id(tile_id)
+            template <class T>
+            Casts()
+                : id(typeid(std::decay_t<T>).hash_code())
+            {}
+
+            template < class T >
+            T* target() noexcept
+            {
+                auto data = static_cast<Derived*>(this)->write( );
+                assert(data);
+                if( data && id == typeid( T ).hash_code() )
+                    return static_cast<T*>( data );
+                return nullptr;
+            }
+
+            template < class T >
+            const T* target( ) const noexcept
+            {
+                auto data = static_cast<const Derived*>(this)->read( );
+                assert(data);
+                if( data && id == typeid( T ).hash_code() )
+                    return static_cast<const T*>( data );
+                return nullptr;
+            }
+
+        private:
+            std::size_t id;
+        };
+
+
+        template <class Derived>
+        class Casts<Derived, false>
+        {
+        public:
+            template <class T>
+            Casts()
+            {}
+
+            template < class T >
+            T* target() noexcept
+            {
+                auto data = static_cast<Derived*>(this)->write( );
+                assert(data);
+                return static_cast<T*>( static_cast<Derived*>(this)->write( ) );
+            }
+
+            template < class T >
+            const T* target( ) const noexcept
+            {
+                auto data = static_cast<const Derived*>(this)->read( );
+                assert(data);
+                return static_cast<const T*>( data );
+            }
+        };
+
+
+        template <class Derived, bool rttiEnabled = true>
+        class Accessor : public Casts<Derived, rttiEnabled>
+        {
+            using Base = Casts<Derived, rttiEnabled>;
+        public:
+            template <class T>
+            constexpr explicit Accessor(bool containsReferenceWrapper = false) noexcept
+                : Base<T>()
+                , containsReferenceWrapper(containsReferenceWrapper)
             {}
 
             template <class T>
@@ -125,26 +186,6 @@ namespace clang
                 return *static_cast<const T*>(data);
             }
 
-            template < class T >
-            T* target() noexcept
-            {
-                auto data = static_cast<Derived*>(this)->write( );
-                assert(data);
-                if( data && id == typeid( T ).hash_code() )
-                    return static_cast<T*>( data );
-                return nullptr;
-            }
-
-            template < class T >
-            const T* target( ) const noexcept
-            {
-                auto data = static_cast<const Derived*>(this)->read( );
-                assert(data);
-                if( data && id == typeid( T ).hash_code() )
-                    return static_cast<const T*>( data );
-                return nullptr;
-            }
-
             explicit operator bool() const noexcept
             {
                 return static_cast<const Derived*>(this)->read( ) != nullptr;
@@ -152,7 +193,6 @@ namespace clang
 
         private:
             bool containsReferenceWrapper = false;
-            std::size_t id = 0;
         };
 
 

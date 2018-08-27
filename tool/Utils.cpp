@@ -43,7 +43,29 @@ namespace clang
                     return std::regex_match(Type, std::regex(".*&&\\s*")) ||
                             !std::regex_match(Type, std::regex(".*(&|\\*)\\s*"));
                 }
+
+                std::string adjustArgument(const std::string& ArgType,
+                                           const std::string& ArgName,
+                                           const std::string& ClassName)
+                {
+                    if(!ContainsClassName(ArgType, ClassName))
+                        return ArgName;
+
+                    const auto IsPtr = std::regex_match(ArgType, std::regex(".*\\*"));
+                    return (IsPtr ? "& " : "") + ArgName + ".template get<Impl>()";
+                }
+
+                std::string adjustArgumentForInterface(const std::string& ArgType,
+                                                       const std::string& ArgName,
+                                                       const std::string& ClassName,
+                                                       const Config& Configuration)
+                {
+                    if(ContainsClassName(ArgType, ClassName))
+                        return ArgName + "." + Configuration.StorageObject;
+                    return ArgName;
+                }
             }
+
 
             void writeNoOverwriteWarning(std::ostream& OS,
                                          const Config& Configuration)
@@ -123,30 +145,6 @@ namespace clang
                 return Stream.str();
             }
 
-
-            namespace
-            {
-                std::string adjustArgument(const std::string& ArgType,
-                                           const std::string& ArgName,
-                                           const std::string& ClassName)
-                {
-                    if(!ContainsClassName(ArgType, ClassName))
-                        return ArgName;
-
-                    const auto IsPtr = std::regex_match(ArgType, std::regex(".*\\*"));
-                    return (IsPtr ? "& " : "") + ArgName + ".template get<Impl>()";
-                }
-
-                std::string adjustArgumentForInterface(const std::string& ArgType,
-                                                       const std::string& ArgName,
-                                                       const std::string& ClassName,
-                                                       const Config& Configuration)
-                {
-                    if(ContainsClassName(ArgType, ClassName))
-                        return ArgName + "." + Configuration.StorageObject;
-                    return ArgName;
-                }
-            }
 
             std::string useFunctionArguments(const CXXMethodDecl& Method,
                                              const std::string& ClassName)
@@ -251,7 +249,7 @@ namespace clang
                 }
 
                 const bool IsReference = std::regex_match(Method.getReturnType().getAsString(printingPolicy()), 
-std::regex(".*&\\s*"));
+                                                          std::regex(".*&\\s*"));
                 auto Str = (Method.getReturnType().isConstQualified() ? "const " : "") + 
                            std::string(Configuration.InterfaceType) +
                            (IsReference ? " &" : "");

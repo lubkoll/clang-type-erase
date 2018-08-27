@@ -105,11 +105,11 @@ cl::opt<std::string> TargetDir("target-dir",
                                cl::init("."),
                                cl::cat(ClangTypeEraseCategory));
 
-////cl::opt<bool> NoRTTI("no-rtti",
-////                          cl::desc(R"(header-only interfaces)"),
-////                          cl::cat(ClangTypeEraseCategory));
-////cl::alias NoRTTI("nr", cl::desc("Alias for -no-rtti"),
-////                           cl::aliasopt(NoRTTI));
+cl::opt<bool> NoRTTI("no-rtti",
+                     cl::desc(R"(header-only interfaces)"),
+                     cl::cat(ClangTypeEraseCategory));
+cl::alias NoRTTI("nr", cl::desc("Alias for -no-rtti"),
+                 cl::aliasopt(NoRTTI));
 
 
 // Collect all other arguments, which will be passed to the front end.
@@ -146,7 +146,7 @@ type_erasure::Config getConfiguration(int Argc, const char **Argv)
     Configuration.NonCopyable = NonCopyable;
     Configuration.HeaderOnly = HeaderOnly;
     Configuration.CustomFunctionTable = CustomFunctionTable;
-    //    config.no_rtti = NoRTTI;
+    Configuration.NoRTTI = NoRTTI;
     Configuration.BufferSize = BufferSize;
     Configuration.CppStandard = CppStandard;
     Configuration.IncludeDir = makeAbsolute(IncludeDir);
