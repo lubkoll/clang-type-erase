@@ -108,8 +108,8 @@ cl::opt<std::string> TargetDir("target-dir",
 cl::opt<bool> NoRTTI("no-rtti",
                      cl::desc(R"(header-only interfaces)"),
                      cl::cat(ClangTypeEraseCategory));
-cl::alias NoRTTI("nr", cl::desc("Alias for -no-rtti"),
-                 cl::aliasopt(NoRTTI));
+cl::alias NoRTTIAlias("nr", cl::desc("Alias for -no-rtti"),
+                      cl::aliasopt(NoRTTI));
 
 
 // Collect all other arguments, which will be passed to the front end.
