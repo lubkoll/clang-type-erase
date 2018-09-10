@@ -99,7 +99,7 @@ namespace clang
         class Casts
         {
         public:
-            Casts(std::size_t typeId) noexcept
+            Casts(std::size_t typeId = 0) noexcept
                 : id(typeId)
             {}
 
@@ -124,7 +124,7 @@ namespace clang
             }
 
             template <class T>
-            static Casts create() noexcept
+            static constexpr Casts create() noexcept
             {
                 return Casts(typeid(std::decay_t<T>).hash_code());
             }
@@ -155,7 +155,7 @@ namespace clang
             }
 
             template <class T>
-            static Casts create() noexcept
+            static constexpr Casts create() noexcept
             {
                 return Casts();
             }
@@ -167,9 +167,10 @@ namespace clang
         {
             using Base = Casts<Derived, rttiEnabled>;
         public:
-            template <class T>
-            constexpr explicit Accessor(bool containsReferenceWrapper = false) noexcept
-                : Base(Base::template create<T>())
+            constexpr Accessor( ) = default;
+
+            explicit Accessor(Base base, bool containsReferenceWrapper) noexcept
+                : Base(base)
                 , containsReferenceWrapper(containsReferenceWrapper)
             {}
 
@@ -198,6 +199,12 @@ namespace clang
                 return static_cast<const Derived*>(this)->read( ) != nullptr;
             }
 
+            template <class T>
+            static constexpr Accessor create(bool containsReferenceWrapper) noexcept
+            {
+                return Accessor(Base::template create<T>(), containsReferenceWrapper);
+            }
+
         private:
             bool containsReferenceWrapper = false;
         };
@@ -211,8 +218,8 @@ namespace clang
             template <class T,
                       std::enable_if_t<!std::is_base_of<Storage, std::decay_t<T> >::value>* = nullptr>
             explicit Storage(T&& value)
-                : Accessor<Storage>(typeid(std::decay_t<T>).hash_code(),
-                                    detail::IsReferenceWrapper< std::decay_t<T> >::value),
+                : Accessor<Storage>(Accessor<Storage>::template create<std::decay_t<T>>(
+                                        detail::IsReferenceWrapper< std::decay_t<T> >::value)),
                   del(&detail::deleteData< std::decay_t<T> >),
                   copy_data(&detail::copyData< std::decay_t<T> >),
                   data(new std::decay_t<T>(std::forward<T>(value)))
@@ -300,6 +307,75 @@ namespace clang
         };
 
 
+        class NonCopyableStorage : public Accessor<NonCopyableStorage>
+        {
+        public:
+            constexpr NonCopyableStorage() noexcept = default;
+
+            template <class T,
+                      std::enable_if_t<!std::is_base_of<NonCopyableStorage, std::decay_t<T> >::value>* = nullptr>
+            explicit NonCopyableStorage(T&& value)
+                : Accessor<NonCopyableStorage>(typeid(std::decay_t<T>).hash_code(),
+                                    detail::IsReferenceWrapper< std::decay_t<T> >::value),
+                  del(&detail::deleteData< std::decay_t<T> >),
+                  data(new std::decay_t<T>(std::forward<T>(value)))
+            {}
+
+            template <class T,
+                      std::enable_if_t<!std::is_base_of<NonCopyableStorage, std::decay_t<T> >::value>* = nullptr>
+            NonCopyableStorage& operator=(T&& value)
+            {
+                return *this = NonCopyableStorage(std::forward<T>(value));
+            }
+
+            ~NonCopyableStorage()
+            {
+                reset();
+            }
+
+            NonCopyableStorage(NonCopyableStorage&& other) noexcept
+                : Accessor<NonCopyableStorage>(other),
+                  del(other.del),
+                  data(other.data)
+            {
+                other.data = nullptr;
+            }
+
+            NonCopyableStorage& operator=(NonCopyableStorage&& other) noexcept
+            {
+                reset();
+                Accessor<NonCopyableStorage>::operator=(other);
+                del = other.del;
+                data = other.data;
+                other.data = nullptr;
+                return *this;
+            }
+
+        private:
+            friend class Accessor<NonCopyableStorage>;
+
+            void reset() noexcept
+            {
+                if(data)
+                    del(data);
+            }
+
+            void* read() const noexcept
+            {
+                return data;
+            }
+
+            void* write() noexcept
+            {
+                return read();
+            }
+
+            using delete_fn = void(*)(void*);
+            delete_fn del = nullptr;
+            void* data = nullptr;
+        };
+
+
         class COWStorage : public Accessor<COWStorage>
         {
         public:
@@ -308,8 +384,8 @@ namespace clang
             template <class T,
                       std::enable_if_t<!std::is_base_of<COWStorage, std::decay_t<T> >::value>* = nullptr>
             explicit COWStorage(T&& value)
-                : Accessor<COWStorage>(typeid(std::decay_t<T>).hash_code(),
-                                       detail::IsReferenceWrapper< std::decay_t<T> >::value),
+                : Accessor<COWStorage>(Accessor<COWStorage>::template create<std::decay_t<T>>(
+                                       detail::IsReferenceWrapper< std::decay_t<T> >::value)),
                   copy_data(&detail::copyData< std::decay_t<T> >),
                   data(std::make_shared< std::decay_t<T> >(std::forward<T>(value)))
             {}
@@ -338,43 +414,6 @@ namespace clang
 
             using copy_fn = std::shared_ptr<void>(*)(const std::shared_ptr<void>&);
             copy_fn copy_data = nullptr;
-            std::shared_ptr<void> data = nullptr;
-        };
-
-
-        class NonCopyableCOWStorage : public Accessor<NonCopyableCOWStorage>
-        {
-        public:
-            constexpr NonCopyableCOWStorage() noexcept = default;
-
-            template <class T,
-                      std::enable_if_t<!std::is_base_of<NonCopyableCOWStorage, std::decay_t<T> >::value>* = nullptr>
-            explicit NonCopyableCOWStorage(T&& value)
-                : Accessor<NonCopyableCOWStorage>(typeid(std::decay_t<T>).hash_code(),
-                                       detail::IsReferenceWrapper< std::decay_t<T> >::value),
-                  data(std::make_shared< std::decay_t<T> >(std::forward<T>(value)))
-            {}
-
-            template <class T,
-                      std::enable_if_t<!std::is_base_of<NonCopyableCOWStorage, std::decay_t<T> >::value>* = nullptr>
-            NonCopyableCOWStorage& operator=(T&& value)
-            {
-                return *this = NonCopyableCOWStorage(std::forward<T>(value));
-            }
-
-        private:
-            friend class Accessor<NonCopyableCOWStorage>;
-
-            void* read() const noexcept
-            {
-                return data.get();
-            }
-
-            void* write() noexcept
-            {
-                return read();
-            }
-
             std::shared_ptr<void> data = nullptr;
         };
 
@@ -408,8 +447,8 @@ namespace clang
             noexcept( sizeof(std::decay_t<T>) <= sizeof(Buffer) &&
                       ( (std::is_rvalue_reference<T>::value && std::is_nothrow_move_constructible<std::decay_t<T>>::value) ||
                         (std::is_lvalue_reference<T>::value && std::is_nothrow_copy_constructible<std::decay_t<T>>::value) ) )
-                : Accessor< SBOStorage<buffer_size> >(typeid(std::decay_t<T>).hash_code(),
-                                                      detail::IsReferenceWrapper< std::decay_t<T> >::value),
+                : Accessor< SBOStorage<buffer_size> >(Accessor< SBOStorage<buffer_size> >::template create<std::decay_t<T>>(
+                                                      detail::IsReferenceWrapper< std::decay_t<T> >::value)),
                   function_table{&detail::deleteData< std::decay_t<T> >,
                                  &detail::destructData< std::decay_t<T> >,
                                  &detail::copyData< std::decay_t<T> >,
@@ -558,7 +597,6 @@ namespace clang
             };
 
         public:
-
             constexpr NonCopyableSBOStorage() noexcept = default;
 
             template <class T,
@@ -567,8 +605,8 @@ namespace clang
             noexcept( sizeof(std::decay_t<T>) <= sizeof(Buffer) &&
                       ( (std::is_rvalue_reference<T>::value && std::is_nothrow_move_constructible<std::decay_t<T>>::value) ||
                         (std::is_lvalue_reference<T>::value && std::is_nothrow_copy_constructible<std::decay_t<T>>::value) ) )
-                : Accessor< NonCopyableSBOStorage<buffer_size> >(typeid(std::decay_t<T>).hash_code(),
-                                                      detail::IsReferenceWrapper< std::decay_t<T> >::value),
+                : Accessor< NonCopyableSBOStorage<buffer_size> >(Accessor< NonCopyableSBOStorage<buffer_size> >::template create<std::decay_t<T>>(
+                                                      detail::IsReferenceWrapper< std::decay_t<T> >::value)),
                   function_table{
                       &detail::deleteData< std::decay_t<T> >,
                       &detail::destructData< std::decay_t<T> > }
@@ -636,6 +674,9 @@ namespace clang
                 return *this;
             }
 
+            NonCopyableSBOStorage(const NonCopyableSBOStorage&) = delete;
+            NonCopyableSBOStorage& operator=(const NonCopyableSBOStorage&) = delete;
+
         private:
             friend class Accessor< NonCopyableSBOStorage<buffer_size> >;
 
@@ -695,8 +736,8 @@ namespace clang
             noexcept( sizeof(std::decay_t<T>) <= sizeof(Buffer) &&
                       ( (std::is_rvalue_reference<T>::value && std::is_nothrow_move_constructible<std::decay_t<T>>::value) ||
                         (std::is_lvalue_reference<T>::value && std::is_nothrow_copy_constructible<std::decay_t<T>>::value) ) )
-                : Accessor< SBOCOWStorage<buffer_size> >(typeid(std::decay_t<T>).hash_code(),
-                                                         detail::IsReferenceWrapper< std::decay_t<T> >::value),
+                : Accessor< SBOCOWStorage<buffer_size> >(Accessor< SBOCOWStorage<buffer_size> >::template create<std::decay_t<T>>(
+                                                         detail::IsReferenceWrapper< std::decay_t<T> >::value)),
                   function_table{&detail::destructData< std::decay_t<T> >,
                                  &detail::copyData< std::decay_t<T> >,
                                  &detail::copyIntoBuffer<std::decay_t<T>, Buffer>},
@@ -711,8 +752,8 @@ namespace clang
             noexcept( sizeof(std::decay_t<T>) <= sizeof(Buffer) &&
                       ( (std::is_rvalue_reference<T>::value && std::is_nothrow_move_constructible<std::decay_t<T>>::value) ||
                         (std::is_lvalue_reference<T>::value && std::is_nothrow_copy_constructible<std::decay_t<T>>::value) ) )
-                : Accessor< SBOCOWStorage<buffer_size> >(typeid(std::decay_t<T>).hash_code(),
-                                                         detail::IsReferenceWrapper< std::decay_t<T> >::value),
+                : Accessor< SBOCOWStorage<buffer_size> >(Accessor< SBOCOWStorage<buffer_size> >::template create<std::decay_t<T>>(
+                                                         detail::IsReferenceWrapper< std::decay_t<T> >::value)),
                   function_table{&detail::destructData< std::decay_t<T> >,
                                  &detail::copyData< std::decay_t<T> >,
                                  &detail::copyIntoBuffer<std::decay_t<T>, Buffer>}
@@ -831,99 +872,5 @@ namespace clang
             std::shared_ptr<void> data = nullptr;
             Buffer buffer;
         };
-
-
-//        template <int buffer_size>
-//        class NonCopyableSBOCOWStorage : public Accessor< NonCopyableSBOCOWStorage<buffer_size> >
-//        {
-//            static const constexpr bool always_copy = false;
-//            static const constexpr bool move_heap_allocated = true;
-//            using Buffer = std::array<char,buffer_size>;
-//        public:
-
-//            constexpr NonCopyableSBOCOWStorage() noexcept = default;
-
-//            template <class T,
-//                      std::enable_if_t<!std::is_base_of<NonCopyableSBOCOWStorage, std::decay_t<T> >::value>* = nullptr>
-//            explicit NonCopyableSBOCOWStorage(T&& value)
-//            noexcept( sizeof(std::decay_t<T>) <= sizeof(Buffer) &&
-//                      ( (std::is_rvalue_reference<T>::value && std::is_nothrow_move_constructible<std::decay_t<T>>::value) ||
-//                        (std::is_lvalue_reference<T>::value && std::is_nothrow_copy_constructible<std::decay_t<T>>::value) ) )
-//                : Accessor< NonCopyableSBOCOWStorage<buffer_size> >(typeid(std::decay_t<T>).hash_code(),
-//                                                         detail::IsReferenceWrapper< std::decay_t<T> >::value),
-//                  function_table{&detail::copy_data< std::decay_t<T> >,
-//                                 &detail::copy_into_buffer<std::decay_t<T>, Buffer>}
-//            {
-//                if( sizeof(std::decay_t<T>) <= sizeof(Buffer))
-//                {
-//                    new(&buffer) std::decay_t<T>(std::forward<T>(value));
-//                    data = std::shared_ptr< std::decay_t<T> >(
-//                               std::shared_ptr< std::decay_t<T> >(),
-//                               static_cast<std::decay_t<T>*>(static_cast<void*>(&buffer))
-//                               );
-//                }
-//                else
-//                    data = std::make_shared< std::decay_t<T> >(std::forward<T>(value));
-//            }
-
-//            template <class T,
-//                      std::enable_if_t<!std::is_base_of<NonCopyableSBOCOWStorage, std::decay_t<T> >::value>* = nullptr>
-//            NonCopyableSBOCOWStorage& operator=(T&& value)
-//            noexcept( sizeof(std::decay_t<T>) <= sizeof(Buffer) &&
-//                      ( (std::is_rvalue_reference<T>::value && std::is_nothrow_move_constructible<std::decay_t<T>>::value) ||
-//                        (std::is_lvalue_reference<T>::value && std::is_nothrow_copy_constructible<std::decay_t<T>>::value) ) )
-//            {
-//                return *this = NonCopyableSBOCOWStorage(std::forward<T>(value));
-//            }
-
-//            NonCopyableSBOCOWStorage(NonCopyableSBOCOWStorage&& other) noexcept
-//                : Accessor< NonCopyableSBOCOWStorage<buffer_size> >(other),
-//                  function_table(other.function_table)
-//            {
-//                if(!other.data)
-//                    return;
-//                data = std::move(other).move_if_heap_allocated(buffer);
-//                other.data = nullptr;
-//            }
-
-//            NonCopyableSBOCOWStorage& operator=(NonCopyableSBOCOWStorage&& other) noexcept
-//            {
-//                if(!other.data)
-//                {
-//                    data = nullptr;
-//                    return *this;
-//                }
-//                Accessor< NonCopyableSBOCOWStorage<buffer_size> >::operator=(other);
-//                function_table = other.function_table;
-//                data = std::move(other).move_if_heap_allocated(buffer);
-//                other.data = nullptr;
-//                return *this;
-//            }
-
-//        private:
-//            friend class Accessor< NonCopyableSBOCOWStorage<buffer_size> >;
-
-//            void* read() const noexcept
-//            {
-//                return data.get();
-//            }
-
-//            void* write() noexcept
-//            {
-//                return read();
-//            }
-
-//            std::shared_ptr<void> move_if_heap_allocated(Buffer& other_buffer) const &&
-//            {
-//                if(detail::is_heap_allocated(data.get(), buffer))
-//                    return std::move(data);
-//                else
-//                    return function_table.copy_into(data, other_buffer);
-//            }
-
-//            FunctionTable function_table;
-//            std::shared_ptr<void> data = nullptr;
-//            Buffer buffer;
-//        };
     }
 }
