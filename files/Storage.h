@@ -99,9 +99,8 @@ namespace clang
         class Casts
         {
         public:
-            template <class T>
-            Casts()
-                : id(typeid(std::decay_t<T>).hash_code())
+            Casts(std::size_t typeId) noexcept
+                : id(typeId)
             {}
 
             template < class T >
@@ -124,6 +123,12 @@ namespace clang
                 return nullptr;
             }
 
+            template <class T>
+            static Casts create() noexcept
+            {
+                return Casts(typeid(std::decay_t<T>).hash_code());
+            }
+
         private:
             std::size_t id;
         };
@@ -133,10 +138,6 @@ namespace clang
         class Casts<Derived, false>
         {
         public:
-            template <class T>
-            Casts()
-            {}
-
             template < class T >
             T* target() noexcept
             {
@@ -152,6 +153,12 @@ namespace clang
                 assert(data);
                 return static_cast<const T*>( data );
             }
+
+            template <class T>
+            static Casts create() noexcept
+            {
+                return Casts();
+            }
         };
 
 
@@ -162,7 +169,7 @@ namespace clang
         public:
             template <class T>
             constexpr explicit Accessor(bool containsReferenceWrapper = false) noexcept
-                : Base<T>()
+                : Base(Base::template create<T>())
                 , containsReferenceWrapper(containsReferenceWrapper)
             {}
 
