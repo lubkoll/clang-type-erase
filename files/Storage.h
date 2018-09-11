@@ -165,8 +165,9 @@ namespace clang
         template <class Derived, bool rttiEnabled = true>
         class Accessor : public Casts<Derived, rttiEnabled>
         {
-            using Base = Casts<Derived, rttiEnabled>;
         public:
+            using Base = Casts<Derived, rttiEnabled>;
+
             constexpr Accessor( ) = default;
 
             explicit Accessor(Base base, bool containsReferenceWrapper) noexcept
@@ -276,6 +277,7 @@ namespace clang
 
         private:
             friend class Accessor<Storage>;
+            friend class Casts<Storage>;
 
             void reset() noexcept
             {
