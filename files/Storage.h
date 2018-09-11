@@ -355,6 +355,7 @@ namespace clang
 
         private:
             friend class Accessor<NonCopyableStorage>;
+            friend class Casts<NonCopyableStorage>;
 
             void reset() noexcept
             {
@@ -401,6 +402,7 @@ namespace clang
 
         private:
             friend class Accessor<COWStorage>;
+            friend class Casts<COWStorage>;
 
             void* read() const noexcept
             {
@@ -439,7 +441,6 @@ namespace clang
             };
 
         public:
-
             constexpr SBOStorage() noexcept = default;
 
             template <class T,
@@ -548,6 +549,7 @@ namespace clang
 
         private:
             friend class Accessor< SBOStorage<buffer_size> >;
+            friend class Casts<SBOStorage<buffer_size>>;
 
             void reset() noexcept
             {
@@ -681,6 +683,7 @@ namespace clang
 
         private:
             friend class Accessor< NonCopyableSBOStorage<buffer_size> >;
+            friend class Casts< NonCopyableSBOStorage<buffer_size> >;
 
             void reset() noexcept
             {
@@ -728,7 +731,6 @@ namespace clang
             };
 
         public:
-
             constexpr SBOCOWStorage() noexcept = default;
 
             template <class T,
@@ -833,6 +835,7 @@ namespace clang
 
         private:
             friend class Accessor< SBOCOWStorage<buffer_size> >;
+            friend class Casts< SBOCOWStorage<buffer_size> >;
 
             void reset() noexcept
             {
