@@ -99,7 +99,7 @@ namespace clang
         class Casts
         {
         public:
-            Casts(std::size_t typeId = 0) noexcept
+            constexpr Casts(std::size_t typeId = 0) noexcept
                 : id(typeId)
             {}
 
