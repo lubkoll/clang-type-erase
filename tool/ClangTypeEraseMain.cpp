@@ -162,22 +162,24 @@ type_erasure::Config getConfiguration(int Argc, const char **Argv)
     Configuration.SourceFile = SourcePaths.front();
     if(Configuration.CustomFunctionTable)
     {
+        const std::string rttiEnabled = Configuration.NoRTTI ? "false" : "true";
         if(!Configuration.NonCopyable)
-            Configuration.StorageType = Configuration.CopyOnWrite ?
-                                            (Configuration.SmallBufferOptimization ?
-                                                 ("clang::type_erasure::SBOCOWStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
-                                                 "clang::type_erasure::COWStorage") :
-                                            (Configuration.SmallBufferOptimization ?
-                                                 ("clang::type_erasure::SBOStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
-                                                 "clang::type_erasure::Storage");
+            Configuration.StorageType =
+                    Configuration.CopyOnWrite ?
+                        (Configuration.SmallBufferOptimization ?
+                             ("clang::type_erasure::SBOCOWStorage<" + std::to_string(Configuration.BufferSize) + ", " +
+                              rttiEnabled + ">").c_str() :
+                             "clang::type_erasure::COWStorage<" + rttiEnabled + ">") :
+                        (Configuration.SmallBufferOptimization ?
+                             ("clang::type_erasure::SBOStorage<" + std::to_string(Configuration.BufferSize) + ", " +
+                              rttiEnabled + ">").c_str() :
+                             "clang::type_erasure::Storage" + rttiEnabled + ">");
         else
-            Configuration.StorageType = Configuration.CopyOnWrite ?
-                                            (Configuration.SmallBufferOptimization ?
-                                                 ("clang::type_erasure::NonCopyableSBOCOWStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
-                                                 "clang::type_erasure::NonCopyableCOWStorage") :
-                                            (Configuration.SmallBufferOptimization ?
-                                                 ("clang::type_erasure::NonCopyableSBOStorage<" + std::to_string(Configuration.BufferSize) + ">").c_str() :
-                                                 "clang::type_erasure::NonCopyableStorage");
+            Configuration.StorageType =
+                        (Configuration.SmallBufferOptimization ?
+                             ("clang::type_erasure::NonCopyableSBOStorage<" + std::to_string(Configuration.BufferSize) + ", " +
+                              rttiEnabled + ">").c_str() :
+                             "clang::type_erasure::NonCopyableStorage<" + rttiEnabled + ">");
     } else {
         Configuration.StorageType = "clang::type_erasure::polymorphic::";
         if(Configuration.CopyOnWrite) {
