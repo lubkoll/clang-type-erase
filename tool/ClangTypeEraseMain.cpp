@@ -107,6 +107,7 @@ cl::opt<std::string> TargetDir("target-dir",
 
 cl::opt<bool> NoRTTI("no-rtti",
                      cl::desc(R"(header-only interfaces)"),
+                     cl::init(false),
                      cl::cat(ClangTypeEraseCategory));
 cl::alias NoRTTIAlias("nr", cl::desc("Alias for -no-rtti"),
                       cl::aliasopt(NoRTTI));
