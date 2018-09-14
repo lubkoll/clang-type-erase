@@ -6,6 +6,16 @@
 #include <memory>
 #include <type_traits>
 
+#ifdef CLANG_TYPE_ERASE_CAST
+#undef CLANG_TYPE_ERASE_CAST
+#endif
+
+#ifdef CLANG_TYPE_ERASE_NO_RTTI
+#define CLANG_TYPE_ERASE_CAST static_cast
+#else
+#define CLANG_TYPE_ERASE_CAST dynamic_cast
+#endif
+
 namespace clang
 {
     namespace type_erasure
@@ -28,125 +38,12 @@ namespace clang
                         static_cast<const void*>( charPtr(&buffer) + sizeof(buffer) ) <= data;
             }
 
-            template <class Storage, class Interface, class Derived, bool = std::is_base_of<Interface,Derived>::value>
-            struct Cast
-            {
-                static Derived* target(bool containsReferenceWrapper, Storage* storage) noexcept
-                {
-                    auto data = storage->getInterfacePtr( );
-                    assert(data);
-                    if(containsReferenceWrapper)
-                        return &dynamic_cast<std::reference_wrapper<Derived>*>(data)->get();
-                    return dynamic_cast<Derived*>(data);
-                }
-
-                static const Derived* target(bool containsReferenceWrapper, const Storage* storage) noexcept
-                {
-                    auto data = storage->getInterfacePtr( );
-                    assert(data);
-                    if(containsReferenceWrapper)
-                        return &dynamic_cast<const std::reference_wrapper<Derived>*>(data)->get();
-                    return dynamic_cast<const Derived*>(data);
-                }
-            };
-
-            template <class Storage, class Interface, class Derived>
-            struct Cast<Storage, Interface, Derived, false>
-            {
-                static Derived* target(bool, Storage*) noexcept
-                {
-                    return nullptr;
-                }
-
-                static const Derived* target(bool, const Storage*) noexcept
-                {
-                    return nullptr;
-                }
-            };
-
-            template <class Derived, template <class> class Wrapper, bool rttiEnabled = true>
-            class Casts
-            {
-            public:
-                constexpr explicit Casts(bool containsReferenceWrapper = false) noexcept
-                    : containsReferenceWrapper(containsReferenceWrapper)
-                {}
-
-                template < class T >
-                T* target() noexcept
-                {
-                    auto interface = static_cast<Derived*>(this)->getInterfacePtr();
-                    if(containsReferenceWrapper)
-                    {
-                        auto wrappedResult = dynamic_cast<Wrapper<std::reference_wrapper<T>>*>(interface);
-                        return wrappedResult ? &wrappedResult->impl : nullptr;
-                    }
-                    auto wrappedResult = dynamic_cast<Wrapper<T>*>(interface);
-                    return wrappedResult ? &wrappedResult->impl : nullptr;
-                }
-
-                template < class T >
-                const T* target() const noexcept
-                {
-                    auto interface = static_cast<const Derived*>(this)->getInterfacePtr();
-                    if(containsReferenceWrapper)
-                    {
-                        auto wrappedResult = dynamic_cast<const Wrapper<std::reference_wrapper<T>>*>(interface);
-                        return wrappedResult ? &wrappedResult->impl : nullptr;
-                    }
-                    auto wrappedResult = dynamic_cast<const Wrapper<T>*>(interface);
-                    return wrappedResult ? &wrappedResult->impl : nullptr;
-                }
-            protected:
-                bool containsReferenceWrapper;
-            };
-
-
-            template <class Derived, template <class> class Wrapper>
-            class Casts<Derived, Wrapper, false>
-            {
-            public:
-                constexpr explicit Casts(bool containsReferenceWrapper = false) noexcept
-                    : containsReferenceWrapper(containsReferenceWrapper)
-                {}
-
-                template < class T >
-                T* target() noexcept
-                {
-                    auto interface = static_cast<const Derived*>(this)->getInterfacePtr();
-                    if(containsReferenceWrapper)
-                    {
-                        auto wrappedResult = static_cast<Wrapper<std::reference_wrapper<T>>*>(interface);
-                        return wrappedResult ? &wrappedResult->impl : nullptr;
-                    }
-                    auto wrappedResult = static_cast<Wrapper<T>*>(interface);
-                    return wrappedResult ? &wrappedResult->impl : nullptr;
-                }
-
-                template < class T >
-                const T* target() const noexcept
-                {
-                    auto interface = static_cast<const Derived*>(this)->getInterfacePtr();
-                    if(containsReferenceWrapper)
-                    {
-                        auto wrappedResult = static_cast<const Wrapper<std::reference_wrapper<T>>*>(interface);
-                        return wrappedResult ? &wrappedResult->impl : nullptr;
-                    }
-                    auto wrappedResult = static_cast<const Wrapper<T>*>(interface);
-                    return wrappedResult ? &wrappedResult->impl : nullptr;
-                }
-            protected:
-                bool containsReferenceWrapper;
-            };
-
-
             template <class Storage, class Interface, template <class> class Wrapper>
-            class Accessor : public Casts<Storage, Wrapper>
+            class Accessor
             {
-                using Casts<Storage, Wrapper>::containsReferenceWrapper;
             public:
                 constexpr explicit Accessor(bool containsReferenceWrapper = false) noexcept
-                    : Casts<Storage, Wrapper>(containsReferenceWrapper)
+                    : containsReferenceWrapper(containsReferenceWrapper)
                 {}
 
                 Interface* operator->()
@@ -179,10 +76,39 @@ namespace clang
                     return *static_cast<const T*>(data);
                 }
 
+                template < class T >
+                T* target() noexcept
+                {
+                    auto interface = static_cast<Derived*>(this)->getInterfacePtr();
+                    if(containsReferenceWrapper)
+                    {
+                        auto wrappedResult = CLANG_TYPE_ERASE_CAST<Wrapper<std::reference_wrapper<T>>*>(interface);
+                        return wrappedResult ? &wrappedResult->impl : nullptr;
+                    }
+                    auto wrappedResult = CLANG_TYPE_ERASE_CAST<Wrapper<T>*>(interface);
+                    return wrappedResult ? &wrappedResult->impl : nullptr;
+                }
+
+                template < class T >
+                const T* target() const noexcept
+                {
+                    auto interface = static_cast<const Derived*>(this)->getInterfacePtr();
+                    if(containsReferenceWrapper)
+                    {
+                        auto wrappedResult = CLANG_TYPE_ERASE_CAST<const Wrapper<std::reference_wrapper<T>>*>(interface);
+                        return wrappedResult ? &wrappedResult->impl : nullptr;
+                    }
+                    auto wrappedResult = CLANG_TYPE_ERASE_CAST<const Wrapper<T>*>(interface);
+                    return wrappedResult ? &wrappedResult->impl : nullptr;
+                }
+
                 explicit operator bool() const noexcept
                 {
                     return static_cast<const Storage*>(this)->getInterfacePtr( ) != nullptr;
                 }
+
+            private:
+                bool containsReferenceWrapper;
             };
 
             template <class Interface, template <class> class Wrapper>
@@ -212,7 +138,6 @@ namespace clang
 
             private:
                 friend class Accessor<Storage, Interface, Wrapper>;
-                friend class Casts<Storage, Wrapper>;
 
                 Interface* getInterfacePtr()
                 {
@@ -241,7 +166,6 @@ namespace clang
 
             private:
                 friend class Accessor<COWStorage, Interface, Wrapper>;
-                friend class Casts<COWStorage, Wrapper>;
 
                 Interface* getInterfacePtr()
                 {
@@ -338,7 +262,6 @@ namespace clang
 
             private:
                 friend class Accessor<SBOStorage, Interface, Wrapper>;
-                friend class Casts<SBOStorage, Wrapper>;
 
                 Interface* getInterfacePtr()
                 {
@@ -444,7 +367,6 @@ namespace clang
 
             private:
                 friend class Accessor<SBOCOWStorage, Interface, Wrapper>;
-                friend class Casts<SBOCOWStorage, Wrapper>;
 
                 Interface* getInterfacePtr()
                 {
@@ -476,3 +398,5 @@ namespace clang
         }
     }
 }
+
+#undef CLANG_TYPE_ERASE_CAST
