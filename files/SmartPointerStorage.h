@@ -75,7 +75,7 @@ namespace clang
                 template < class T >
                 T* target() noexcept
                 {
-                    auto interface = static_cast<const Derived*>(this)->getInterfacePtr();
+                    auto interface = static_cast<Derived*>(this)->getInterfacePtr();
                     if(containsReferenceWrapper)
                     {
                         auto wrappedResult = dynamic_cast<Wrapper<std::reference_wrapper<T>>*>(interface);
@@ -212,6 +212,7 @@ namespace clang
 
             private:
                 friend class Accessor<Storage, Interface, Wrapper>;
+                friend class Casts<Storage, Wrapper>;
 
                 Interface* getInterfacePtr()
                 {
@@ -239,6 +240,9 @@ namespace clang
                 {}
 
             private:
+                friend class Accessor<COWStorage, Interface, Wrapper>;
+                friend class Casts<COWStorage, Wrapper>;
+
                 Interface* getInterfacePtr()
                 {
                     if(!interface_.unique())
@@ -250,8 +254,6 @@ namespace clang
                 {
                     return interface_.get();
                 }
-
-                friend class Accessor<COWStorage, Interface, Wrapper>;
 
                 std::shared_ptr<Interface> interface_;
             };
@@ -336,6 +338,7 @@ namespace clang
 
             private:
                 friend class Accessor<SBOStorage, Interface, Wrapper>;
+                friend class Casts<SBOStorage, Wrapper>;
 
                 Interface* getInterfacePtr()
                 {
@@ -441,6 +444,7 @@ namespace clang
 
             private:
                 friend class Accessor<SBOCOWStorage, Interface, Wrapper>;
+                friend class Casts<SBOCOWStorage, Wrapper>;
 
                 Interface* getInterfacePtr()
                 {
