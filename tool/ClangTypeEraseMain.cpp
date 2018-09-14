@@ -174,7 +174,7 @@ type_erasure::Config getConfiguration(int Argc, const char **Argv)
                         (Configuration.SmallBufferOptimization ?
                              ("clang::type_erasure::SBOStorage<" + std::to_string(Configuration.BufferSize) + ", " +
                               rttiEnabled + ">").c_str() :
-                             "clang::type_erasure::Storage" + rttiEnabled + ">");
+                             "clang::type_erasure::Storage<" + rttiEnabled + ">");
         else
             Configuration.StorageType =
                         (Configuration.SmallBufferOptimization ?
