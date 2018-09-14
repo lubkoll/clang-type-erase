@@ -719,8 +719,6 @@ namespace clang
         template <int buffer_size, bool rttiEnabled>
         class SBOCOWStorage : public Accessor< SBOCOWStorage<buffer_size, rttiEnabled>, rttiEnabled >
         {
-            static const constexpr bool always_copy = false;
-            static const constexpr bool move_heap_allocated = true;
             using Buffer = std::array<char,buffer_size>;
 
             struct FunctionTable
