@@ -79,7 +79,7 @@ namespace clang
                 template < class T >
                 T* target() noexcept
                 {
-                    auto interface = static_cast<Derived*>(this)->getInterfacePtr();
+                    auto interface = static_cast<Storage*>(this)->getInterfacePtr();
                     if(containsReferenceWrapper)
                     {
                         auto wrappedResult = CLANG_TYPE_ERASE_CAST<Wrapper<std::reference_wrapper<T>>*>(interface);
@@ -92,7 +92,7 @@ namespace clang
                 template < class T >
                 const T* target() const noexcept
                 {
-                    auto interface = static_cast<const Derived*>(this)->getInterfacePtr();
+                    auto interface = static_cast<const Storage*>(this)->getInterfacePtr();
                     if(containsReferenceWrapper)
                     {
                         auto wrappedResult = CLANG_TYPE_ERASE_CAST<const Wrapper<std::reference_wrapper<T>>*>(interface);
