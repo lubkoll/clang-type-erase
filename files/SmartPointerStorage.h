@@ -64,12 +64,89 @@ namespace clang
                 }
             };
 
-            template <class Storage, class Interface, template <class> class Wrapper>
-            class Accessor
+            template <class Derived, template <class> class Wrapper, bool rttiEnabled = true>
+            class Casts
             {
             public:
-                constexpr explicit Accessor(bool contains_ref_wrapper = false) noexcept
-                    : containsReferenceWrapper(contains_ref_wrapper)
+                constexpr explicit Casts(bool containsReferenceWrapper = false) noexcept
+                    : containsReferenceWrapper(containsReferenceWrapper)
+                {}
+
+                template < class T >
+                T* target() noexcept
+                {
+                    auto interface = static_cast<const Derived*>(this)->getInterfacePtr();
+                    if(containsReferenceWrapper)
+                    {
+                        auto wrappedResult = dynamic_cast<Wrapper<std::reference_wrapper<T>>*>(interface);
+                        return wrappedResult ? &wrappedResult->impl : nullptr;
+                    }
+                    auto wrappedResult = dynamic_cast<Wrapper<T>*>(interface);
+                    return wrappedResult ? &wrappedResult->impl : nullptr;
+                }
+
+                template < class T >
+                const T* target() const noexcept
+                {
+                    auto interface = static_cast<const Derived*>(this)->getInterfacePtr();
+                    if(containsReferenceWrapper)
+                    {
+                        auto wrappedResult = dynamic_cast<const Wrapper<std::reference_wrapper<T>>*>(interface);
+                        return wrappedResult ? &wrappedResult->impl : nullptr;
+                    }
+                    auto wrappedResult = dynamic_cast<const Wrapper<T>*>(interface);
+                    return wrappedResult ? &wrappedResult->impl : nullptr;
+                }
+            protected:
+                bool containsReferenceWrapper;
+            };
+
+
+            template <class Derived, template <class> class Wrapper>
+            class Casts<Derived, Wrapper, false>
+            {
+            public:
+                constexpr explicit Casts(bool containsReferenceWrapper = false) noexcept
+                    : containsReferenceWrapper(containsReferenceWrapper)
+                {}
+
+                template < class T >
+                T* target() noexcept
+                {
+                    auto interface = static_cast<const Derived*>(this)->getInterfacePtr();
+                    if(containsReferenceWrapper)
+                    {
+                        auto wrappedResult = static_cast<Wrapper<std::reference_wrapper<T>>*>(interface);
+                        return wrappedResult ? &wrappedResult->impl : nullptr;
+                    }
+                    auto wrappedResult = static_cast<Wrapper<T>*>(interface);
+                    return wrappedResult ? &wrappedResult->impl : nullptr;
+                }
+
+                template < class T >
+                const T* target() const noexcept
+                {
+                    auto interface = static_cast<const Derived*>(this)->getInterfacePtr();
+                    if(containsReferenceWrapper)
+                    {
+                        auto wrappedResult = static_cast<const Wrapper<std::reference_wrapper<T>>*>(interface);
+                        return wrappedResult ? &wrappedResult->impl : nullptr;
+                    }
+                    auto wrappedResult = static_cast<const Wrapper<T>*>(interface);
+                    return wrappedResult ? &wrappedResult->impl : nullptr;
+                }
+            protected:
+                bool containsReferenceWrapper;
+            };
+
+
+            template <class Storage, class Interface, template <class> class Wrapper>
+            class Accessor : public Casts<Storage, Wrapper>
+            {
+                using Casts<Storage, Wrapper>::containsReferenceWrapper;
+            public:
+                constexpr explicit Accessor(bool containsReferenceWrapper = false) noexcept
+                    : Casts<Storage, Wrapper>(containsReferenceWrapper)
                 {}
 
                 Interface* operator->()
@@ -102,39 +179,10 @@ namespace clang
                     return *static_cast<const T*>(data);
                 }
 
-                template < class T >
-                T* target() noexcept
-                {
-                    auto interface = static_cast<const Storage*>(this)->interface_.get();
-                    if(containsReferenceWrapper)
-                    {
-                        auto wrappedResult = dynamic_cast<Wrapper<std::reference_wrapper<T>>*>(interface);
-                        return wrappedResult ? &wrappedResult->impl : nullptr;
-                    }
-                    auto wrappedResult = dynamic_cast<Wrapper<T>*>(interface);
-                    return wrappedResult ? &wrappedResult->impl : nullptr;
-                }
-
-                template < class T >
-                const T* target() const noexcept
-                {
-                    auto interface = static_cast<const Storage*>(this)->interface_.get();
-                    if(containsReferenceWrapper)
-                    {
-                        auto wrappedResult = dynamic_cast<const Wrapper<std::reference_wrapper<T>>*>(interface);
-                        return wrappedResult ? &wrappedResult->impl : nullptr;
-                    }
-                    auto wrappedResult = dynamic_cast<const Wrapper<T>*>(interface);
-                    return wrappedResult ? &wrappedResult->impl : nullptr;
-                }
-
                 explicit operator bool() const noexcept
                 {
                     return static_cast<const Storage*>(this)->getInterfacePtr( ) != nullptr;
                 }
-
-            private:
-                bool containsReferenceWrapper = false;
             };
 
             template <class Interface, template <class> class Wrapper>
