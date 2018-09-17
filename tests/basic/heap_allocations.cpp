@@ -103,7 +103,7 @@ TEST( TestBasicFooable_HeapAllocations, CopyAssignment )
                       expected_heap_allocations );
 }
 
-TEST( TestBasicFooable_HeapAllocations, CopyAssignFromValuenWithReferenceWrapper )
+TEST( TestBasicFooable_HeapAllocations, CopyAssignFromValueWithReferenceWrapper )
 {
     auto expected_heap_allocations = 1u;
 

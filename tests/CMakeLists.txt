@@ -10,14 +10,17 @@ include_directories(.)
 aux_source_directory(. SRC_LIST)
 # inheritance-based type erasure
 aux_source_directory(gen/basic SRC_LIST)
+aux_source_directory(gen/basic_non_copyable SRC_LIST)
 aux_source_directory(gen/cow SRC_LIST)
 aux_source_directory(gen/sbo SRC_LIST)
+aux_source_directory(gen/sbo_non_copyable SRC_LIST)
 aux_source_directory(gen/sbo_cow SRC_LIST)
 # vtable-based type erasure
 aux_source_directory(gen/vtable_basic SRC_LIST)
 aux_source_directory(gen/vtable_basic_non_copyable SRC_LIST)
 aux_source_directory(gen/vtable_cow SRC_LIST)
 aux_source_directory(gen/vtable_sbo SRC_LIST)
+aux_source_directory(gen/vtable_sbo_non_copyable SRC_LIST)
 aux_source_directory(gen/vtable_sbo_cow SRC_LIST)
 
 aux_source_directory(gen/test SRC_LIST)

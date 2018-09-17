@@ -4,14 +4,11 @@
 #include "../non_copyable_mock_fooable.hh"
 #include "../util.hh"
 
-namespace
-{
-    using VTableSBONonCopyable::Fooable;
-    using MockFooable = Mock::NonCopyableMockFooable;
-    using MockLargeFooable = Mock::NonCopyableMockLargeFooable;
-}
+using SBONonCopyable::Fooable;
+using MockFooable = Mock::NonCopyableMockFooable;
+using MockLargeFooable = Mock::NonCopyableMockLargeFooable;
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, Empty )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, Empty )
 {
     auto expected_heap_allocations = 0u;
 
@@ -26,7 +23,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, Empty )
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, CopyFromValueWithReferenceWrapper_SmallObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, CopyFromValueWithReferenceWrapper_SmallObject )
 {
     auto expected_heap_allocations = 0u;
 
@@ -35,7 +32,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, CopyFromValueWithReferenc
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveFromValue_SmallObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, MoveFromValue_SmallObject )
 {
     auto expected_heap_allocations = 0u;
 
@@ -44,7 +41,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveFromValue_SmallObject
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveConstruction_SmallObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, MoveConstruction_SmallObject )
 {
     auto expected_heap_allocations = 0u;
 
@@ -53,7 +50,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveConstruction_SmallObj
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveFromValueWithReferenceWrapper_SmallObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, MoveFromValueWithReferenceWrapper_SmallObject )
 {
     auto expected_heap_allocations = 0u;
 
@@ -62,7 +59,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveFromValueWithReferenc
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, CopyAssignFromValuenWithReferenceWrapper_SmallObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, CopyAssignFromValueWithReferenceWrapper_SmallObject )
 {
     auto expected_heap_allocations = 0u;
 
@@ -72,7 +69,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, CopyAssignFromValuenWithR
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveAssignFromValue_SmallObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, MoveAssignFromValue_SmallObject )
 {
     auto expected_heap_allocations = 0u;
 
@@ -82,7 +79,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveAssignFromValue_Small
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveAssignment_SmallObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, MoveAssignment_SmallObject )
 {
     auto expected_heap_allocations = 0u;
 
@@ -93,7 +90,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveAssignment_SmallObjec
 }
 
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveAssignFromValueWithReferenceWrapper_SmallObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, MoveAssignFromValueWithReferenceWrapper_SmallObject )
 {
     auto expected_heap_allocations = 0u;
 
@@ -104,7 +101,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveAssignFromValueWithRe
 }
 
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, CopyFromValueWithReferenceWrapper_LargeObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, CopyFromValueWithReferenceWrapper_LargeObject )
 {
     auto expected_heap_allocations = 0u;
 
@@ -113,7 +110,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, CopyFromValueWithReferenc
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveFromValue_LargeObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, MoveFromValue_LargeObject )
 {
     auto expected_heap_allocations = 1u;
 
@@ -122,7 +119,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveFromValue_LargeObject
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveConstruction_LargeObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, MoveConstruction_LargeObject )
 {
     auto expected_heap_allocations = 0u;
 
@@ -131,7 +128,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveConstruction_LargeObj
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveFromValueWithReferenceWrapper_LargeObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, MoveFromValueWithReferenceWrapper_LargeObject )
 {
     auto expected_heap_allocations = 0u;
 
@@ -140,7 +137,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveFromValueWithReferenc
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, CopyAssignFromValuenWithReferenceWrapper_LargeObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, CopyAssignFromValueWithReferenceWrapper_LargeObject )
 {
     auto expected_heap_allocations = 0u;
 
@@ -150,7 +147,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, CopyAssignFromValuenWithR
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveAssignFromValue_LargeObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, MoveAssignFromValue_LargeObject )
 {
     auto expected_heap_allocations = 1u;
 
@@ -160,7 +157,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveAssignFromValue_Large
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveAssignment_LargeObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, MoveAssignment_LargeObject )
 {
     auto expected_heap_allocations = 0u;
 
@@ -171,7 +168,7 @@ TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveAssignment_LargeObjec
 }
 
 
-TEST( TestVTableNonCopyableSBOFooable_HeapAllocations, MoveAssignFromValueWithReferenceWrapper_LargeObject )
+TEST( TestNonCopyableSBOFooable_HeapAllocations, MoveAssignFromValueWithReferenceWrapper_LargeObject )
 {
     auto expected_heap_allocations = 0u;
 

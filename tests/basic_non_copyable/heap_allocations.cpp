@@ -4,13 +4,10 @@
 #include "../non_copyable_mock_fooable.hh"
 #include "../util.hh"
 
-namespace
-{
-    using VTableBasicNonCopyable::Fooable;
-    using MockFooable = Mock::NonCopyableMockFooable;
-}
+using Fooable = BasicNonCopyable::Fooable;
+using MockFooable = Mock::NonCopyableMockFooable;
 
-TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, Empty )
+TEST( TestNonCopyableBasicFooable_HeapAllocations, Empty )
 {
     auto expected_heap_allocations = 0u;
 
@@ -25,7 +22,7 @@ TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, Empty )
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, CopyFromValueWithReferenceWrapper )
+TEST( TestNonCopyableBasicFooable_HeapAllocations, CopyFromValueWithReferenceWrapper )
 {
     auto expected_heap_allocations = 1u;
 
@@ -34,7 +31,7 @@ TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, CopyFromValueWithRefere
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, MoveFromValue )
+TEST( TestNonCopyableBasicFooable_HeapAllocations, MoveFromValue )
 {
     auto expected_heap_allocations = 1u;
 
@@ -43,7 +40,7 @@ TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, MoveFromValue )
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, MoveConstruction )
+TEST( TestNonCopyableBasicFooable_HeapAllocations, MoveConstruction )
 {
     auto expected_heap_allocations = 0u;
 
@@ -52,7 +49,7 @@ TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, MoveConstruction )
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, MoveFromValueWithReferenceWrapper )
+TEST( TestNonCopyableBasicFooable_HeapAllocations, MoveFromValueWithReferenceWrapper )
 {
     auto expected_heap_allocations = 1u;
 
@@ -61,7 +58,7 @@ TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, MoveFromValueWithRefere
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, CopyAssignFromValueWithReferenceWrapper )
+TEST( TestNonCopyableBasicFooable_HeapAllocations, CopyAssignFromValueWithReferenceWrapper )
 {
     auto expected_heap_allocations = 1u;
 
@@ -71,7 +68,7 @@ TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, CopyAssignFromValueWith
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, MoveAssignFromValue )
+TEST( TestNonCopyableBasicFooable_HeapAllocations, MoveAssignFromValue )
 {
     auto expected_heap_allocations = 1u;
 
@@ -81,7 +78,7 @@ TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, MoveAssignFromValue )
                       expected_heap_allocations );
 }
 
-TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, MoveAssignment )
+TEST( TestNonCopyableBasicFooable_HeapAllocations, MoveAssignment )
 {
     auto expected_heap_allocations = 0u;
 
@@ -92,7 +89,7 @@ TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, MoveAssignment )
 }
 
 
-TEST( TestVTableNonCopyableBasicFooable_HeapAllocations, MoveAssignFromValueWithReferenceWrapper )
+TEST( TestNonCopyableBasicFooable_HeapAllocations, MoveAssignFromValueWithReferenceWrapper )
 {
     auto expected_heap_allocations = 1u;
 

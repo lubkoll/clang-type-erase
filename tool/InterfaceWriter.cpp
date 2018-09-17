@@ -609,20 +609,24 @@ namespace clang
                 copyComment(ClassStream, *Comment, Context.getSourceManager());
             ClassStream << "class " << ClassName << "\n"
                         << "{\n";
-            ClassStream << "struct Interface { virtual ~Interface() = default; "
-                        << "virtual " << (Configuration.CopyOnWrite || Configuration.SmallBufferOptimization
+            ClassStream << "struct Interface { virtual ~Interface() = default; ";
+            if(!Configuration.NonCopyable)
+            ClassStream << "virtual " << (Configuration.CopyOnWrite || Configuration.SmallBufferOptimization
                                           ? "std::shared_ptr<Interface>"
                                           : "std::unique_ptr<Interface>")
                         << "clone() const = 0;";
             BaseImplStream << "template <class Impl> struct " << WRAPPER << " : Interface {"
                            << "template <class T> " << WRAPPER <<"(T&& t) : impl(std::forward<T>(t)){}\n\n";
-            if(Configuration.CopyOnWrite || Configuration.SmallBufferOptimization)
-                BaseImplStream << "std::shared_ptr<Interface> clone() const {"
-                               << "return std::make_shared<" << WRAPPER << "<Impl>>(impl);";
-            else
-                BaseImplStream << "std::unique_ptr<Interface> clone() const {"
-                               << "return std::make_unique<" << WRAPPER << "<Impl>>(impl);";
-            BaseImplStream << "}\n\n";
+            if(!Configuration.NonCopyable)
+            {
+                if(Configuration.CopyOnWrite || Configuration.SmallBufferOptimization)
+                    BaseImplStream << "std::shared_ptr<Interface> clone() const {"
+                                   << "return std::make_shared<" << WRAPPER << "<Impl>>(impl);";
+                else
+                    BaseImplStream << "std::unique_ptr<Interface> clone() const {"
+                                   << "return std::make_unique<" << WRAPPER << "<Impl>>(impl);";
+                BaseImplStream << "}\n\n";
+            }
 
             std::for_each(Declaration->method_begin(),
                           Declaration->method_end(),
