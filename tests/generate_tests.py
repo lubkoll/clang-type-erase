@@ -18,6 +18,8 @@ def create_parser():
                     help='cpp-file containing the generated unit tests')
     parser.add_argument('--sbo', action='store_true',
                         help='generate tests for small and large objects')
+    parser.add_argument('--non-copyable', action='store_true',
+                        help='generate tests non-copyable objects')
     return parser
 
 
@@ -26,6 +28,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.sbo:
         args.form = args.form.replace(os.path.basename(args.form), 'sbo_' + os.path.basename(args.form))
+    if args.non_copyable:
+        args.form = args.form.replace(os.path.basename(args.form), 'non_copyable_' + os.path.basename(args.form))
     form = open(args.form,'r')
     test_file = open(args.test_file,'w')
 
