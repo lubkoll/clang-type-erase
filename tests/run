@@ -47,6 +47,7 @@ prepare_vtable_test_case vtable_basic VTableBasic
 prepare_vtable_test_case vtable_basic_non_copyable VTableBasicNonCopyable --non-copyable
 prepare_vtable_test_case vtable_cow VTableCOW
 prepare_vtable_test_case vtable_sbo VTableSBO --sbo
+prepare_vtable_test_case vtable_sbo_non_copyable VTableSBONonCopyable --sbo --non-copyable
 prepare_vtable_test_case vtable_sbo_cow VTableSBOCOW --sbo
 cd ..
 
