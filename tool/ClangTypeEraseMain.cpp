@@ -165,6 +165,7 @@ type_erasure::Config getConfiguration(int Argc, const char **Argv)
     {
         const std::string rttiEnabled = Configuration.NoRTTI ? "false" : "true";
         if(!Configuration.NonCopyable)
+        {
             Configuration.StorageType =
                     Configuration.CopyOnWrite ?
                         (Configuration.SmallBufferOptimization ?
@@ -175,12 +176,15 @@ type_erasure::Config getConfiguration(int Argc, const char **Argv)
                              ("clang::type_erasure::SBOStorage<" + std::to_string(Configuration.BufferSize) + ", " +
                               rttiEnabled + ">").c_str() :
                              "clang::type_erasure::Storage<" + rttiEnabled + ">");
+        }
         else
+        {
             Configuration.StorageType =
                         (Configuration.SmallBufferOptimization ?
                              ("clang::type_erasure::NonCopyableSBOStorage<" + std::to_string(Configuration.BufferSize) + ", " +
                               rttiEnabled + ">").c_str() :
                              "clang::type_erasure::NonCopyableStorage<" + rttiEnabled + ">");
+        }
     } else {
         Configuration.StorageType = "clang::type_erasure::polymorphic::";
         if(Configuration.CopyOnWrite) {
@@ -197,6 +201,13 @@ bool checkInput(const type_erasure::Config& Configuration)
 {
     if(!boost::filesystem::exists(Configuration.SourceFile))
         return false;
+
+    if(Configuration.NonCopyable && Configuration.CopyOnWrite)
+    {
+        llvm::outs() << " === Inconsistent input:\n"
+                        " === Invalid combination of options '-non-copyable/--nc' and '-copy-on-write/--cow'.\n";
+        return false;
+    }
     return true;
 }
 
