@@ -1,5 +1,4 @@
-#ifndef MOCK_FOOABLE_HH
-#define MOCK_FOOABLE_HH
+#pragma once
 
 #include <array>
 
@@ -31,4 +30,3 @@ namespace Mock
     };
 }
 
-#endif // MOCK_FOOABLE_HH
