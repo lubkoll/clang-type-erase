@@ -1,0 +1,19 @@
+#!/bin/bash
+
+INTERFACE_FILE=$1
+GIVEN_INTERFACE=$2
+
+UTIL_DIR="gen/vtable_basic_non_copyable"
+DETAIL_DIR=.
+INCLUDE_DIR=../../
+
+COMMAND=$3
+COMMON_ARGS="-detail-dir=$DETAIL_DIR -include-dir=$INCLUDE_DIR -util-dir=$UTIL_DIR -util-include-dir=<$UTIL_DIR/TypeErasureUtil.h> -storage-include-dir=<$UTIL_DIR/Storage.h>"
+
+function generate_interface {
+echo "generate $1"
+$COMMAND $COMMON_ARGS $2 -target-dir=$UTIL_DIR $1 -std=c++14 
+}
+
+generate_interface Interface/$INTERFACE_FILE "-custom -non-copyable"
+
