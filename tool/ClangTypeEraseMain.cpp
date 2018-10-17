@@ -85,11 +85,6 @@ cl::opt<std::string> UtilInclude("util-include-dir",
                                  cl::init("<util/table_util.h>"),
                                  cl::cat(ClangTypeEraseCategory));
 
-cl::opt<std::string> StorageInclude("storage-include-dir",
-                                    cl::desc(R"(string for including Storage.h, incl. angle brackets or parenthesis)"),
-                                    cl::init("<util/Storage.h>"),
-                                    cl::cat(ClangTypeEraseCategory));
-
 cl::opt<std::string> CastName("cast-name",
                               cl::desc(R"(name for casting member functions, (defaults to 'target', following std::function))"),
                               cl::init("target"),
@@ -137,6 +132,9 @@ std::string concat(const std::string& Path,
             boost::filesystem::path(Directory)).c_str();
 }
 
+const auto STORAGE = "Storage";
+const auto SMART_PTR_STORAGE = "SmartPointerStorage.h";
+
 type_erasure::Config getConfiguration(int Argc, const char **Argv)
 {
     cl::ParseCommandLineOptions(Argc, Argv, "clang-type-erase.\n");
@@ -154,7 +152,11 @@ type_erasure::Config getConfiguration(int Argc, const char **Argv)
     Configuration.UtilDir = concat(Configuration.IncludeDir,
                                    UtilDir);
     Configuration.UtilInclude = UtilInclude;
-    Configuration.StorageInclude = StorageInclude;
+    Configuration.StorageInclude = "<" +
+                                   (Configuration.CustomFunctionTable
+                                   ? concat(UtilDir, STORAGE)
+                                   : concat(UtilDir, SMART_PTR_STORAGE))
+                                   + ">";
     Configuration.CastName = CastName;
     Configuration.TargetDir = concat(Configuration.IncludeDir,
                                      TargetDir);
@@ -200,7 +202,10 @@ type_erasure::Config getConfiguration(int Argc, const char **Argv)
 bool checkInput(const type_erasure::Config& Configuration)
 {
     if(!boost::filesystem::exists(Configuration.SourceFile))
+    {
+        llvm::outs() << " === Missing source file: " << Configuration.SourceFile << "\n";
         return false;
+    }
 
     if(Configuration.NonCopyable && Configuration.CopyOnWrite)
     {
@@ -302,20 +307,20 @@ int main(int Argc, const char **Argv)
     {
         const auto SuccessfulCopy =
                 copyFile(Configuration.UtilDir, "TypeErasureUtil.h") &&
-        copyFile(Configuration.UtilDir, "Storage.h");
-        if(!SuccessfulCopy)
+        copyFile(Configuration.UtilDir, STORAGE);
+        if(!SuccessfulCopy && !boost::filesystem::exists(Configuration.UtilDir/boost::filesystem::path(STORAGE)))
             return 1;
     } else {
         const auto SuccessfulCopy =
-                copyFile(Configuration.UtilDir, "SmartPointerStorage.h");
-        if(!SuccessfulCopy)
+                copyFile(Configuration.UtilDir, SMART_PTR_STORAGE);
+        if(!SuccessfulCopy && !boost::filesystem::exists(Configuration.UtilDir/boost::filesystem::path(SMART_PTR_STORAGE)))
             return 1;
     }
     const auto SuccessfulCopy =
             copyFile(Configuration.SourceFile,
                      Configuration.TargetDir,
                      boost::filesystem::path(Configuration.SourceFile).filename().c_str());
-    if(!SuccessfulCopy)
+    if(!SuccessfulCopy && !boost::filesystem::exists(Configuration.TargetDir/boost::filesystem::path(Configuration.SourceFile).filename()))
         return 1;
 
     const auto Status = generateInterface(Configuration);

@@ -30,7 +30,7 @@ namespace clang
             } else
                 IncludePath.front() = IncludePath.back() = '"';
 
-            Stream << '#' + PP.getSpelling(IncludeTok) + ' ' + std::move(IncludePath) + '\n';
+            Stream << '#' + PP.getSpelling(IncludeTok) + ' ' + std::move(IncludePath) + "\n\n";
         }
 
         llvm::StringRef PreprocessorCallback::getSourceString(CharSourceRange Range)
