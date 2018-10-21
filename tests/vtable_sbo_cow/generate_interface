@@ -9,13 +9,13 @@ BUFFER_SIZE=16
 INCLUDE_DIR=../../
 
 COMMAND=$3
-COMMON_ARGS="-detail-dir=$DETAIL_DIR -include-dir=$INCLUDE_DIR -util-dir=$UTIL_DIR -util-include-dir=<$UTIL_DIR/TypeErasureUtil.h> -storage-include-dir=<$UTIL_DIR/Storage.h> -cow -sbo -buffer-size=$BUFFER_SIZE"
+COMMON_ARGS="-detail-dir=$DETAIL_DIR -include-dir=$INCLUDE_DIR -util-dir=$UTIL_DIR -util-include-dir=<$UTIL_DIR/TypeErasureUtil.h>"
 
 function generate_interface {
 echo "generate $1"
 $COMMAND $COMMON_ARGS $2 -target-dir=$UTIL_DIR $1 -std=c++14
 }
 
-generate_interface Interface/$INTERFACE_FILE "-custom"
+generate_interface Interface/$INTERFACE_FILE "-custom -cow -sbo -buffer-size=$BUFFER_SIZE"
 
 

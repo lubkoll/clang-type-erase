@@ -132,7 +132,7 @@ std::string concat(const std::string& Path,
             boost::filesystem::path(Directory)).c_str();
 }
 
-const auto STORAGE = "Storage";
+const auto STORAGE = "Storage.h";
 const auto SMART_PTR_STORAGE = "SmartPointerStorage.h";
 
 type_erasure::Config getConfiguration(int Argc, const char **Argv)
