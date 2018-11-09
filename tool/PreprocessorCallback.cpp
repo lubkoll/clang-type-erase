@@ -7,10 +7,12 @@ namespace clang
     {
         PreprocessorCallback::PreprocessorCallback(std::ofstream& Stream,
                                                    ASTContext& Context,
-                                                   Preprocessor &PP)
+                                                   Preprocessor &PP,
+                                                   const Config& Configuration)
             : Stream(Stream),
               Context(Context),
-              PP(PP)
+              PP(PP),
+              Configuration(Configuration)
         {}
 
         void PreprocessorCallback::InclusionDirective(
@@ -24,13 +26,19 @@ namespace clang
                 return;
 
             auto IncludePath = getSourceString(FilenameRange).str();
+
+            if(!Configuration.CustomFunctionTable && IncludePath == "<type_traits>")
+                return;
+            if((Configuration.CopyOnWrite || !Configuration.CustomFunctionTable) && IncludePath == "<memory>")
+                return;
+
             if(IsAngled) {
                 IncludePath.front() = '<';
                 IncludePath.back() = '>';
             } else
                 IncludePath.front() = IncludePath.back() = '"';
 
-            Stream << '#' + PP.getSpelling(IncludeTok) + ' ' + std::move(IncludePath) + "\n\n";
+            Stream << '#' + PP.getSpelling(IncludeTok) + ' ' + std::move(IncludePath) + "\n";
         }
 
         llvm::StringRef PreprocessorCallback::getSourceString(CharSourceRange Range)

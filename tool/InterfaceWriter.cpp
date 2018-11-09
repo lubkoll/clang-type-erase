@@ -325,7 +325,7 @@ namespace clang
               PP(PP),
               Configuration(Configuration)
         {
-            PP.addPPCallbacks(std::make_unique<PreprocessorCallback>(InterfaceFile, Context, PP));
+            PP.addPPCallbacks(std::make_unique<PreprocessorCallback>(InterfaceFile, Context, PP, Configuration));
 
             utils::writeNoOverwriteWarning(InterfaceFile, Configuration);
             InterfaceFile << "#pragma once\n\n";
@@ -334,14 +334,14 @@ namespace clang
                 InterfaceFile << Include << '\n';
             InterfaceFile << '\n';
 
-            InterfaceFile << "#include " << Configuration.StorageInclude << "\n\n";
+            InterfaceFile << "#include " << Configuration.StorageInclude << "\n";
 
             if(Configuration.CopyOnWrite || !Configuration.CustomFunctionTable) {
                 InterfaceFile << "#include <memory>\n";
             }
 
             if(!Configuration.CustomFunctionTable)
-                InterfaceFile << "#include <type_traits>\n\n";
+                InterfaceFile << "#include <type_traits>\n";
         }
 
         InterfaceGenerator::~InterfaceGenerator()
@@ -380,6 +380,9 @@ namespace clang
         {
             if(!Context.getSourceManager().isWrittenInMainFile(Declaration->getBeginLoc()))
                 return true;
+
+            if(OpenNamespaces.empty())
+                InterfaceFileStream << '\n';
 
             utils::handleClosingNamespaces(InterfaceFileStream, *Declaration, OpenNamespaces);
             if(const auto Comment = Context.getCommentForDecl(Declaration, &PP))

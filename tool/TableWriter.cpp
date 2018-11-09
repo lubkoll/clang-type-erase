@@ -129,7 +129,7 @@ namespace clang
               Context(Context),
               Configuration(Configuration)
         {
-            PP.addPPCallbacks(std::make_unique<PreprocessorCallback>(TableFile, Context, PP));
+            PP.addPPCallbacks(std::make_unique<PreprocessorCallback>(TableFile, Context, PP, Configuration));
 
             utils::writeNoOverwriteWarning(TableFile, Configuration);
             TableFile << "#pragma once\n\n"

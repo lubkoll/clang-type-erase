@@ -1,3 +1,6 @@
+// This file was automatically generated using clang-type-erase.
+// Please do not modify.
+
 #pragma once
 
 #include <array>

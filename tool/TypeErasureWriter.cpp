@@ -5,8 +5,6 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/Preprocessor.h"
 
-#include "PreprocessorCallback.h"
-
 #include <numeric>
 
 namespace clang

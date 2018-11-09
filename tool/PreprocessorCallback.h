@@ -4,6 +4,8 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/StringRef.h"
 
+#include "Config.h"
+
 #include <fstream>
 
 namespace clang
@@ -14,7 +16,8 @@ namespace clang
         public:
             PreprocessorCallback(std::ofstream& Stream,
                                  ASTContext& Context,
-                                 Preprocessor &PP);
+                                 Preprocessor &PP,
+                                 const Config& Configuration);
 
             void InclusionDirective(SourceLocation HashLoc,
                                     const Token &IncludeTok, llvm::StringRef, bool IsAngled,
@@ -28,6 +31,7 @@ namespace clang
             std::ofstream& Stream;
             ASTContext& Context;
             Preprocessor& PP;
+            const Config& Configuration;
         };
     }
 }
