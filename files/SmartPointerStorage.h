@@ -120,7 +120,7 @@ namespace clang
                           std::enable_if_t<!std::is_base_of<Storage, std::decay_t<T> >::value>* = nullptr,
                           std::enable_if_t<std::is_base_of<Interface, Wrapper<T>>::value>* = nullptr>
                 explicit Storage(T&& t)
-                    : interface_(std::make_unique<Wrapper<T>>(std::forward<T>(t)))
+                    : interface_(std::make_unique<Wrapper<std::decay_t<T>>>(std::forward<T>(t)))
                 {}
 
                 Storage(Storage&&) = default;
@@ -161,7 +161,7 @@ namespace clang
                           std::enable_if_t<!std::is_base_of<COWStorage, std::decay_t<T> >::value>* = nullptr,
                           std::enable_if_t<std::is_base_of<Interface, Wrapper<T>>::value>* = nullptr>
                 explicit COWStorage(T&& t)
-                    : interface_(std::make_shared<Wrapper<T>>(std::forward<T>(t)))
+                    : interface_(std::make_shared<Wrapper<std::decay_t<T>>>(std::forward<T>(t)))
                 {}
 
             private:
