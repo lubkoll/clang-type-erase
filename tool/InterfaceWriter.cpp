@@ -181,13 +181,6 @@ namespace clang
                 File << '\n';
             }
 
-            std::string decayed(const std::string& Type, const Config& Configuration)
-            {
-                if(Configuration.CppStandard >= 14)
-                    return "std::decay_t<" + Type + ">";
-                return "typename std::decay<" + Type + ">::type";
-            }
-
             std::string enable_if(const std::string& Type,
                                   const std::string& ClassName,
                                   const std::string& DetailNamespace,
@@ -202,11 +195,13 @@ namespace clang
                 if(Configuration.CustomFunctionTable)
                 {
                     Stream << "<" << DetailNamespace << "::Concept<" << ClassName << ", "
-                           << decayed(Type, Configuration) << ">::value>";
+                           << utils::decayed(Type, Configuration) << ">::value>";
                 }
                 else
                 {
-                    Stream << "<!std::is_same<" << decayed(Type, Configuration) << "," << ClassName << ">::value>";
+                    Stream << "<!std::is_same<"
+                           << utils::decayed(Type, Configuration) << "," << ClassName <<  ">::value && "
+                           << "!std::is_base_of<Interface, " << utils::decayed(Type, Configuration) << ">::value>";
                 }
 
                 if(Configuration.CppStandard < 14)
@@ -304,7 +299,7 @@ namespace clang
                                         std::regex("(|.*::)" + ClassName + "::" + Declaration.getNameAsString()));
 
             }
-        }
+        } // end anonymous namespace
 
 
         InterfaceGenerator::AliasAndStaticMemberEntry::AliasAndStaticMemberEntry(const std::string& ClassName,
@@ -548,7 +543,7 @@ namespace clang
                 if(const auto Comment = Context.getCommentForDecl(Method, &PP))
                     copyComment(ClassStream, *Comment, Context.getSourceManager());
 
-                FunctionNames.emplace_back(utils::getFunctionName(*Method));
+                FunctionNames.emplace_back(utils::getFunctionName(*Method, Configuration));
                 const auto ReturnType = Method->getReturnType().getAsString(printingPolicy());
                 ClassStream << ReturnType << ' '
                             << Method->getNameAsString() << "(";
@@ -567,7 +562,7 @@ namespace clang
                             << "{\n"
                             << "assert(" << Configuration.StorageObject << ");\n"
                             << (ReturnType == "void" ? "" : "return ")
-                            << Configuration.FunctionTableObject << "." << utils::getFunctionName(*Method)
+                            << Configuration.FunctionTableObject << "." << utils::getFunctionName(*Method, Configuration)
                             << '('
                             << (utils::returnsClassNameRef(*Method, ClassName) ? "*this, " : "")
                             << Configuration.StorageObject
@@ -641,8 +636,7 @@ namespace clang
                 const auto ReturnType = Method->getReturnType().getAsString(printingPolicy());
                 std::stringstream SignatureStream;
 
-                SignatureStream << ReturnType << ' '
-                            << Method->getNameAsString() << "(";
+                SignatureStream << "(";
                 if(!Method->param_empty())
                     std::for_each(Method->param_begin(),
                                   Method->param_end(),
@@ -653,25 +647,32 @@ namespace clang
                             SignatureStream << ", ";
                     });
                 SignatureStream << ")" << (Method->isConst() ? " const" : "");
-                const auto Signature = SignatureStream.str();
+                const auto ReturnsReferenceToSelf = ClassName != ReturnType && utils::ContainsClassName(ReturnType, ClassName);
+                const auto SignatureEnd = SignatureStream.str();
+                const auto SignatureInInterface = (ReturnsReferenceToSelf ? std::string("void") : ReturnType) + ' ' +
+                                                  utils::getFunctionName(*Method, Configuration) + SignatureEnd;
+                const auto Signature = ReturnType + ' ' + Method->getNameAsString() + SignatureEnd;
 
                 auto ForwardingWrite =
-                        [&](const auto& StorageObject, const auto& Accessor, auto& Stream, std::string Override="")
+                        [&](const auto& StorageObject, const auto& Accessor, auto& Stream,
+                            std::string Override, auto writeArgs, bool ReturnsReferenceToSelf, bool InInterface)
                 {
-                    Stream << Signature << " " << Override << " "
+                    Stream << (InInterface ? SignatureInInterface : Signature) << " " << Override << " "
                            << "{\n"
-                           << (ReturnType == "void" ? "" : "return ")
-                           << StorageObject << Accessor << Method->getNameAsString()
-                           << '('
-                           << utils::useFunctionArgumentsInInterface(*Method, ClassName, Configuration)
-                           << ");\n"
+                           << (ReturnType == "void" || ReturnsReferenceToSelf ? "" : "return ")
+                           << StorageObject << Accessor
+                           << (InInterface ? Method->getNameAsString() : utils::getFunctionName(*Method, Configuration))
+                           << '(' << writeArgs(*Method, ClassName, Configuration) << ");\n"
+                           << (ReturnsReferenceToSelf && !InInterface ? "return *this;\n" : "")
                            << "}\n\n";
 
                 };
 
-                ClassStream << "virtual " << Signature << " = 0;";
-                ForwardingWrite("impl", ".", BaseImplStream, "override");
-                ForwardingWrite(Configuration.StorageObject, "->", ForwardingStream);
+                ClassStream << "virtual " << SignatureInInterface << " = 0;";
+                ForwardingWrite("impl", ".", BaseImplStream, "override", utils::useFunctionArgumentsInInterface,
+                                ReturnsReferenceToSelf, true);
+                ForwardingWrite(Configuration.StorageObject, "->", ForwardingStream, "", utils::useFunctionArguments,
+                                ReturnsReferenceToSelf, false);
             });
 
             ClassStream << "};\n\n";

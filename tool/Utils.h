@@ -20,13 +20,18 @@ namespace clang
 
         namespace utils
         {
+            std::string decayed(const std::string& Type, const Config& Configuration);
+
+            bool ContainsClassName(const std::string& Str,
+                                   const std::string& ClassName);
+
             void writeNoOverwriteWarning(std::ostream& OS,
                                          const Config& Configuration);
 
             bool returnsClassNameRef(const CXXMethodDecl& Method,
                                      const std::string& ClassName);
 
-            std::string getFunctionName(const CXXMethodDecl& Method);
+            std::string getFunctionName(const CXXMethodDecl& Method, const Config& Configuration);
 
             std::string getFunctionArguments(const CXXMethodDecl& Method,
                                              const std::string& ClassName,
@@ -34,7 +39,8 @@ namespace clang
                                              bool PrintNames=false);
 
             std::string useFunctionArguments(const CXXMethodDecl& Method,
-                                             const std::string& ClassName);
+                                             const std::string& ClassName,
+                                             const Config& Configuration);
 
             std::string useFunctionArgumentsInInterface(const CXXMethodDecl& Method,
                                                         const std::string& ClassName,

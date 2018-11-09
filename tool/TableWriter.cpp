@@ -24,7 +24,7 @@ namespace clang
                 {
                     if(!Method->isUserProvided())
                         return;
-                    auto FunctionName = utils::getFunctionName(*Method);
+                    auto FunctionName = utils::getFunctionName(*Method, Configuration);
                     Stream << "using " << FunctionName << "_function = "
                            << utils::getFunctionPointer(*Method, Declaration.getName().str(), Configuration) << " ;\n"
                            << FunctionName << "_function " << FunctionName << " ;\n";
@@ -50,7 +50,7 @@ namespace clang
                                                                                    ClassName,
                                                                                    Configuration);
                     const auto ReturnsClassNameRef = utils::returnsClassNameRef(*Method, ClassName);
-                    Stream << "static " << std::get<0>(NewReturnType) << ' ' << utils::getFunctionName(*Method)
+                    Stream << "static " << std::get<0>(NewReturnType) << ' ' << utils::getFunctionName(*Method, Configuration)
                            << " ( ";
                     if( std::get<1>(NewReturnType) )
                         Stream << (Method->getReturnType().isConstQualified() ? "const " : "") << Configuration.InterfaceType << " & "
@@ -61,7 +61,7 @@ namespace clang
                                ? "" : "return ")
                            << "data.template get<Impl>()."
                            << Method->getNameAsString() << " ( "
-                           << utils::useFunctionArguments(*Method, ClassName)
+                           << utils::useFunctionArguments(*Method, ClassName, Configuration)
                            << " );\n"
                            << (ReturnsClassNameRef
                                ? std::string("return ") + Configuration.InterfaceObject + ";\n"
@@ -72,19 +72,20 @@ namespace clang
             }
 
             void writeConcepts(std::ofstream& Stream,
-                               const CXXRecordDecl& Declaration)
+                               const CXXRecordDecl& Declaration,
+                               const Config& Configuration)
             {
                 std::vector<std::string> Concepts;
                 Concepts.reserve(std::distance(Declaration.method_begin(), Declaration.method_end()));
 
                 std::for_each(Declaration.method_begin(),
                               Declaration.method_end(),
-                              [&Stream,&Declaration,&Concepts]
+                              [&Stream,&Declaration,&Concepts, &Configuration]
                               (const auto& Method)
                 {
                     if(!Method->isUserProvided())
                         return;
-                    const auto FunctionName = utils::getFunctionName(*Method);
+                    const auto FunctionName = utils::getFunctionName(*Method, Configuration);
                     const auto TryMemFnName = "TryMemFn_" + FunctionName;
                     const auto HasMemFnName = "HasMemFn_" + FunctionName;
                     Concepts.emplace_back(HasMemFnName);
@@ -169,7 +170,7 @@ namespace clang
 
             writeTable(TableFile, *Declaration, Configuration);
             writeWrapper(TableFile, *Declaration, Configuration);
-            writeConcepts(TableFile, *Declaration);
+            writeConcepts(TableFile, *Declaration, Configuration);
 
             TableFile << "}\n\n";
             return true;

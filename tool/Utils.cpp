@@ -22,14 +22,21 @@ namespace clang
 
         namespace utils
         {
+            std::string decayed(const std::string& Type, const Config& Configuration)
+            {
+                if(Configuration.CppStandard >= 14)
+                    return "std::decay_t<" + Type + ">";
+                return "typename std::decay<" + Type + ">::type";
+            }
+
+            bool ContainsClassName(const std::string& Str,
+                                   const std::string& ClassName)
+            {
+                return std::regex_match(Str, std::regex("(.*\\s+|.*::|)(" + ClassName + ")(\\s+.*|)"));
+            }
+
             namespace
             {
-                bool ContainsClassName(const std::string& Str,
-                                       const std::string& ClassName)
-                {
-                    return std::regex_match(Str, std::regex("(.*\\s+|.*::|)(" + ClassName + ")(\\s+.*|)"));
-                }
-
                 std::string replaceClassNameInParam(const std::string& Str,
                                                     const std::string& ClassName,
                                                     const std::string& NewClassName)
@@ -46,9 +53,10 @@ namespace clang
 
                 std::string adjustArgument(const std::string& ArgType,
                                            const std::string& ArgName,
-                                           const std::string& ClassName)
+                                           const std::string& ClassName,
+                                           const Config& Configuration)
                 {
-                    if(!ContainsClassName(ArgType, ClassName))
+                    if(!Configuration.CustomFunctionTable || !ContainsClassName(ArgType, ClassName))
                         return ArgName;
 
                     const auto IsPtr = std::regex_match(ArgType, std::regex(".*\\*"));
@@ -61,7 +69,11 @@ namespace clang
                                                        const Config& Configuration)
                 {
                     if(ContainsClassName(ArgType, ClassName))
-                        return ArgName + "." + Configuration.StorageObject;
+                    {
+                        if(Configuration.CustomFunctionTable)
+                            return ArgName + "." + Configuration.StorageObject;
+                        return "*" + ArgName + ".template target<" + decayed("Impl", Configuration) + ">()";
+                    }
                     return ArgName;
                 }
             }
@@ -85,7 +97,7 @@ namespace clang
             }
 
 
-            std::string getFunctionName(const CXXMethodDecl& Method)
+            std::string getFunctionName(const CXXMethodDecl& Method, const Config& Configuration)
             {
                 auto Name = Method.getNameAsString();
                 std::stringstream Stream;
@@ -108,7 +120,12 @@ namespace clang
                     else if(Name == "operator==")
                         Stream << "compare";
                 }
-                else Stream << Name;
+                else
+                {
+                    if(!Configuration.CustomFunctionTable)
+                        return Name;
+                    Stream << Name;
+                }
 
                 std::for_each(Method.param_begin(),
                               Method.param_end(),
@@ -147,15 +164,16 @@ namespace clang
 
 
             std::string useFunctionArguments(const CXXMethodDecl& Method,
-                                             const std::string& ClassName)
+                                             const std::string& ClassName,
+                                             const Config& Configuration)
             {
                 std::stringstream Stream;
-                const auto Writer = [&Stream,&ClassName](const auto& Param)
+                const auto Writer = [&Stream,&ClassName, &Configuration](const auto& Param)
                 {
                     const auto ParamType = Param->getType().getAsString(printingPolicy());
                     const auto IsMovable = isMovable(ParamType);
                     Stream << (IsMovable ? "std::move ( " : "")
-                           << adjustArgument(ParamType, Param->getNameAsString(), ClassName)
+                           << adjustArgument(ParamType, Param->getNameAsString(), ClassName, Configuration)
                            << (IsMovable ? " )" : "");
                 };
 
