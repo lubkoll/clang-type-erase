@@ -618,10 +618,10 @@ namespace clang
             if(!Configuration.NonCopyable)
             {
                 if(Configuration.CopyOnWrite || Configuration.SmallBufferOptimization)
-                    BaseImplStream << "std::shared_ptr<Interface> clone() const {"
+                    BaseImplStream << "std::shared_ptr<Interface> clone() const override {"
                                    << "return std::make_shared<" << WRAPPER << "<Impl>>(impl);";
                 else
-                    BaseImplStream << "std::unique_ptr<Interface> clone() const {"
+                    BaseImplStream << "std::unique_ptr<Interface> clone() const override {"
                                    << "return std::make_unique<" << WRAPPER << "<Impl>>(impl);";
                 BaseImplStream << "}\n\n";
             }
@@ -662,6 +662,7 @@ namespace clang
                 {
                     Stream << (InInterface ? SignatureInInterface : Signature) << " " << Override << " "
                            << "{\n"
+                           << (!InInterface ? std::string("assert(") + StorageObject + ");\n" : std::string())
                            << (ReturnType == "void" || ReturnsReferenceToSelf ? "" : "return ")
                            << StorageObject << Accessor
                            << (InInterface ? Method->getNameAsString() : utils::getFunctionName(*Method, Configuration))
