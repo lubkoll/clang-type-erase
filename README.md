@@ -4,15 +4,14 @@
 
 Parses a header file with one or multiple interface definitions and creates the corresponding type-erased interfaces. 
 
-
-
-Options:
+<details>
+<summary>Options</summary>
 * Choose between the straight-forward implementation of type-erased interfaces based on built-in dynamical polymorphism or an optimized implementation that is based on custom function tables.
 * copy-on-write
 * small buffer optimization
 * non-copyable interfaces
 * no RTTI
-
+</details>
 
 
 **clang-type-erase** is based on Clang's [LibTooling](https://clang.llvm.org/docs/LibTooling.html). To compile it do:
