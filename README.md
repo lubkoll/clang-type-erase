@@ -13,7 +13,7 @@ Parses a header file with one or multiple interface definitions and creates the 
     * no RTTI
 * **clang-type-erase** is based on Clang's [LibTooling](https://clang.llvm.org/docs/LibTooling.html). To compile it:
     * [obtain Clang](https://clang.llvm.org/docs/LibASTMatchersTutorial.html)
-    * download/clone clang-type-erase and place the folder 'clang-type-erase' into \<path-to-llvm\>/tools/clang/tools/extra
-    * add 'add_subdirectory(clang-type-erase)' to \<path-to-llvm\>/tools/clang/tools/extra/CMakeLists.txt
+    * download/clone clang-type-erase and place the folder `clang-type-erase` into `\<path-to-llvm\>/tools/clang/tools/extra`
+    * add `add_subdirectory(clang-type-erase)` to `\<path-to-llvm\>/tools/clang/tools/extra/CMakeLists.txt`
     * (re-)compile (see [here](https://clang.llvm.org/docs/LibASTMatchersTutorial.html))
 
