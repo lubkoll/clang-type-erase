@@ -119,6 +119,14 @@ namespace clang
                         Stream << "negate";
                     else if(Name == "operator==")
                         Stream << "compare";
+                    else if(Name == "operator!=")
+                        Stream << "not_equal";
+                    else if(Name == "operator++")
+                        Stream << "increment";
+                    else if(Name == "operator--")
+                        Stream << "decrement";
+                    else if(Name == "operator*")
+                        Stream << "dereference";
                 }
                 else
                 {
