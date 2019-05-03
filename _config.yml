@@ -1,4 +1,3 @@
 theme: jekyll-theme-minimal
 title: clang-type-erase
-description: type erasure based on clang Tooling
 show_downloads: true
