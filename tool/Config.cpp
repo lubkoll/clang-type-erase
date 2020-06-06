@@ -44,14 +44,14 @@ namespace clang
             std::string lTrim(std::string&& Str) {
                 Str.erase(Str.begin(), std::find_if(Str.begin(), Str.end(),
                         std::not1(std::ptr_fun<int, int>(std::isspace))));
-                return Str;
+                return std::move(Str);
             }
 
             // trim from end
             std::string rTrim(std::string&& Str) {
                 Str.erase(std::find_if(Str.rbegin(), Str.rend(),
                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(), Str.end());
-                return Str;
+                return std::move(Str);
             }
 
             // trim from both ends

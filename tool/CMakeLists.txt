@@ -21,13 +21,15 @@ add_dependencies(clang-type-erase
   clang-headers
 )
 
+
+find_package(Boost COMPONENTS system filesystem REQUIRED)
 target_link_libraries(clang-type-erase PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
   clangTooling
-  boost_filesystem
-  boost_system
+  Boost::system
+  Boost::filesystem
 )
 
 install(TARGETS clang-type-erase RUNTIME DESTINATION bin)

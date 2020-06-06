@@ -9,6 +9,7 @@
 
 #include <boost/filesystem.hpp>
 
+#include <memory>
 #include <vector>
 
 namespace clang
@@ -26,9 +27,9 @@ namespace clang
                                  Preprocessor& PP,
                                  const Config& Configuration);
 
-            TypeErasureGenerator(const TypeErasureGenerator&) = default;
+            TypeErasureGenerator(const TypeErasureGenerator&) = delete;
             TypeErasureGenerator& operator=(const TypeErasureGenerator&) = delete;
-            TypeErasureGenerator(TypeErasureGenerator&&) = default;
+            TypeErasureGenerator(TypeErasureGenerator&&) = delete;
             TypeErasureGenerator& operator=(TypeErasureGenerator&&) = delete;
 
             bool VisitNamespaceDecl(NamespaceDecl* Declaration);
@@ -56,7 +57,7 @@ namespace clang
         public:
             explicit TypeErasureActionFactory(const type_erasure::Config& Configuration);
 
-            FrontendAction* create() override;
+            std::unique_ptr<FrontendAction> create() override;
 
         private:
             type_erasure::Config Configuration;

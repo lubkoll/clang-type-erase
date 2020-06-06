@@ -158,9 +158,9 @@ namespace clang
             : Configuration(Configuration)
         {}
 
-        FrontendAction* TypeErasureActionFactory::create()
+        std::unique_ptr<FrontendAction> TypeErasureActionFactory::create()
         {
-            return new type_erasure::TypeErasureAction(Configuration);
+            return std::make_unique<type_erasure::TypeErasureAction>(Configuration);
         }
     }
 }

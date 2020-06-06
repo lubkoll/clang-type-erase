@@ -41,7 +41,7 @@ namespace clang
                                           (SmallBufferOptimization ?
                                                "clang::type_erasure::SBOStorage" :
                                                "clang::type_erasure::Storage");
-            std::string FormattingCommand = "clang-format-3.8 -i";
+            std::string FormattingCommand = "clang-format -i";
         };
 
         std::ostream& operator<<(std::ostream& OS, const Config& Configuration);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "clang/AST/ASTContext.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/StringRef.h"

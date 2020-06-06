@@ -425,7 +425,7 @@ namespace clang
                                                        [](auto C) { return C=='\''; });
                     Initializer = std::accumulate(Init.rbegin(), InitREnd,
                                                   std::string(" = "),
-                                                  [this](std::string Str, auto C)
+                                                  [](std::string Str, auto C)
                     { return (C=='\n' || C == '\r' || C == '\t') ? Str : Str + C; });
                 }
 
@@ -539,7 +539,7 @@ namespace clang
             std::vector<std::string> FunctionNames;
             std::for_each(Declaration->method_begin(),
                           Declaration->method_end(),
-                          [this,&Declaration,&FunctionNames,&ClassName,&ClassStream](const auto& Method)
+                          [this,&FunctionNames,&ClassName,&ClassStream](const auto& Method)
             {
                 if(!Method->isUserProvided())
                     return;
@@ -628,7 +628,7 @@ namespace clang
 
             std::for_each(Declaration->method_begin(),
                           Declaration->method_end(),
-                          [this,&Declaration,&ClassName,
+                          [this,&ClassName,
                            &ClassStream,&BaseImplStream,&ForwardingStream](const auto& Method)
             {
                 if(!Method->isUserProvided())

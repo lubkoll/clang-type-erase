@@ -24,9 +24,9 @@ namespace clang
 
             ~TableGenerator();
 
-            TableGenerator(const TableGenerator&) = default;
+            TableGenerator(const TableGenerator&) = delete;
             TableGenerator& operator=(const TableGenerator&) = delete;
-            TableGenerator(TableGenerator&&) = default;
+            TableGenerator(TableGenerator&&) = delete;
             TableGenerator& operator=(TableGenerator&&) = delete;
 
             bool VisitNamespaceDecl(NamespaceDecl* Declaration);
